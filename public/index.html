@@ -258,7 +258,23 @@ svg {
         <label>
             Y:
             <input type="number" id="nodeY">
-        </label>
+    </label>
+    
+        <label>
+            Width:
+            <input type="number" id="nodeWidth">
+    </label>
+    
+        <label>
+            Height:
+            <input type="number" id="nodeHeight">
+    </label>
+    
+        <label>
+            Instance:
+            <input type="number" id="nodeInstance">
+    </label>
+    
         <label>
             Background:
             <input type="text" id="nodeBackground">
@@ -411,163 +427,70 @@ const nodeLayer = g.append("g").attr("class", "nodes");
 
 
 // GROUPING LAYER
+let isDragging = false;
+let startPoint = null;
+let currentBox = null;
 
- let isDragging = false;
-        let startPoint = null;
-        let currentBox = null;
+svg.on("mousedown", (event) => {
+    if (event.ctrlKey && event.target === svg.node()) {
+        event.preventDefault();
+        event.stopPropagation();
+        isDragging = true;
+        startPoint = d3.pointer(event, g.node());
+        currentBox = groupingLayer.append("rect")
+            .attr("class", "grouping-box")
+            .attr("x", startPoint[0])
+            .attr("y", startPoint[1])
+            .attr("width", 0)
+            .attr("height", 0);
+    }
+});
 
-        svg.on("mousedown", (event) => {
-            if (event.ctrlKey && event.target === svg.node()) {
-                console.log("ctrl key pressed, starting drag");
-                event.preventDefault();
-                event.stopPropagation();
-                isDragging = true;
-                startPoint = d3.pointer(event, g.node());
-                console.log("Start point:", startPoint);
-                currentBox = groupingLayer.append("rect")
-                    .attr("class", "grouping-box")
-                    .attr("x", startPoint[0])
-                    .attr("y", startPoint[1])
-                    .attr("width", 0)
-                    .attr("height", 0)
-                    .call(dragBox);
-            }
-        });
+svg.on("mousemove", (event) => {
+    if (isDragging && currentBox) {
+        event.preventDefault();
+        event.stopPropagation();
+        const currentPoint = d3.pointer(event, g.node());
+        const width = currentPoint[0] - startPoint[0];
+        const height = currentPoint[1] - startPoint[1];
+        currentBox
+            .attr("width", Math.abs(width))
+            .attr("height", Math.abs(height))
+            .attr("x", width < 0 ? currentPoint[0] : startPoint[0])
+            .attr("y", height < 0 ? currentPoint[1] : startPoint[1]);
+    }
+});
 
-        svg.on("mousemove", (event) => {
-            if (isDragging && currentBox) {
-                event.preventDefault();
-                event.stopPropagation();
-                const currentPoint = d3.pointer(event, g.node());
-                const width = currentPoint[0] - startPoint[0];
-                const height = currentPoint[1] - startPoint[1];
-                console.log("Current point:", currentPoint);
-                console.log("Width:", width, "Height:", height);
-                currentBox
-                    .attr("width", Math.abs(width))
-                    .attr("height", Math.abs(height))
-                    .attr("x", width < 0 ? currentPoint[0] : startPoint[0])
-                    .attr("y", height < 0 ? currentPoint[1] : startPoint[1]);
-            }
-        });
-
-        svg.on("mouseup", (event) => {
-            if (isDragging) {
-                console.log("Mouse up, stopping drag");
-                event.preventDefault();
-                event.stopPropagation();
-                isDragging = false;
-                startPoint = null;
-                if (currentBox) {
-                    createResizeHandles(currentBox);
-                    currentBox = null;
-                }
-            }
-        });
-
-        svg.on("mouseleave", (event) => {
-            if (isDragging) {
-                console.log("Mouse left SVG, stopping drag and removing incomplete box");
-                event.preventDefault();
-                event.stopPropagation();
-                isDragging = false;
-                startPoint = null;
-                if (currentBox) {
-                    currentBox.remove(); // Remove incomplete box if mouse leaves the SVG
-                    currentBox = null;
-                }
-            }
-        });
-
-        // Drag behavior for boxes
-        const dragBox = d3.drag()
-            .on("start", function (event) {
-                d3.select(this).raise().attr("stroke", "black");
-            })
-            .on("drag", function (event) {
-                d3.select(this)
-                    .attr("x", +d3.select(this).attr("x") + event.dx)
-                    .attr("y", +d3.select(this).attr("y") + event.dy);
-                updateHandles(d3.select(this));
-            })
-            .on("end", function (event) {
-                d3.select(this).attr("stroke", null);
-            });
-
-        // Create resize handles for a box
-        function createResizeHandles(box) {
-            const x = +box.attr("x");
-            const y = +box.attr("y");
-            const width = +box.attr("width");
-            const height = +box.attr("height");
-            
-            const handles = [
-                { x: x + width, y: y + height, cursor: "nwse-resize" }
-            ];
-
-            handles.forEach(handle => {
-                groupingLayer.append("circle")
-                    .attr("class", "resize-handle")
-                    .attr("cx", handle.x)
-                    .attr("cy", handle.y)
-                    .attr("r", 5)
-                    .style("cursor", handle.cursor)
-                    .call(dragResize(box));
-            });
+svg.on("mouseup", (event) => {
+    if (isDragging) {
+        event.preventDefault();
+        event.stopPropagation();
+        isDragging = false;
+        if (currentBox) {
+            const x = +currentBox.attr("x");
+            const y = +currentBox.attr("y");
+            const width = +currentBox.attr("width");
+            const height = +currentBox.attr("height");
+            createGroupingBoxNode(x, y, width, height);
+            currentBox.remove();
+            currentBox = null;
         }
+    }
+});
 
-        // Update resize handles position
-        function updateHandles(box) {
-            const x = +box.attr("x");
-            const y = +box.attr("y");
-            const width = +box.attr("width");
-            const height = +box.attr("height");
-
-            groupingLayer.selectAll(".resize-handle")
-                .data([{ x: x + width, y: y + height }])
-                .attr("cx", d => d.x)
-                .attr("cy", d => d.y);
+svg.on("mouseleave", (event) => {
+    if (isDragging) {
+        event.preventDefault();
+        event.stopPropagation();
+        isDragging = false;
+        if (currentBox) {
+            currentBox.remove(); // Remove incomplete box if mouse leaves the SVG
+            currentBox = null;
         }
+    }
+});
 
-        // Drag behavior for resize handles
-        const dragResize = (box) => d3.drag()
-            .on("drag", function (event) {
-                const handle = d3.select(this);
-                const newWidth = Math.max(10, event.x - +box.attr("x"));
-                const newHeight = Math.max(10, event.y - +box.attr("y"));
-                box.attr("width", newWidth).attr("height", newHeight);
-                handle.attr("cx", event.x).attr("cy", event.y);
-            });
 
-        // Delete box on double click
-        groupingLayer.on("dblclick", function (event) {
-            if (event.target.tagName === "rect") {
-                d3.select(event.target).remove();
-                groupingLayer.selectAll(".resize-handle").remove();
-            }
-        });
-
-        // Keydown event to delete selected boxes
-        d3.select(window).on("keydown", (event) => {
-            if (event.key === "Delete" || event.key === "Backspace") {
-                groupingLayer.selectAll(".selected").remove();
-                groupingLayer.selectAll(".resize-handle").remove();
-            }
-        });
-
-        // Select box on click
-        groupingLayer.on("click", function (event) {
-            if (event.target.tagName === "rect") {
-                d3.selectAll(".grouping-box").classed("selected", false);
-                const box = d3.select(event.target);
-                box.classed("selected", true);
-                groupingLayer.selectAll(".resize-handle").remove();
-                createResizeHandles(box);
-            } else {
-                d3.selectAll(".grouping-box").classed("selected", false);
-                groupingLayer.selectAll(".resize-handle").remove();
-            }
-        });
 
 
 // GROUPING LAYER
@@ -608,13 +531,15 @@ async function fetchNodesAndLinks(x0, x1, y0, y1) {
     result.records.forEach(record => {
         const nodeN = record.get('n').properties;
         nodeN.x_positions = nodeN.x_positions.map(Number); // Ensure x_positions are numbers
-        nodeN.y_positions = nodeN.y_positions.map(Number); // Ensure y_positions are numbers
+	nodeN.y_positions = nodeN.y_positions.map(Number); // Ensure y_positions are numbers
+	nodeN.widths = nodeN.widths.map(Number); // Ensure y_positions are numbers
+	nodeN.heights = nodeN.heights.map(Number); // Ensure y_positions are numbers
         nodeN.connections = record.get('n_connections'); // Add connections property
 
         // Duplicate nodes for each position within the viewport
         nodeN.x_positions.forEach((x, index) => {
             if (x >= x0 && x <= x1 && nodeN.y_positions[index] >= y0 && nodeN.y_positions[index] <= y1) {
-                const nodeCopy = { ...nodeN, x: x, y: nodeN.y_positions[index], instance: index };
+                const nodeCopy = { ...nodeN, x: x, y: nodeN.y_positions[index], width: nodeN.widths[index], height: nodeN.heights[index], instance: index };
                 nodes.push(nodeCopy);
             }
         });
@@ -623,12 +548,14 @@ async function fetchNodesAndLinks(x0, x1, y0, y1) {
         if (nodeM) {
             nodeM.x_positions = nodeM.x_positions.map(Number); // Ensure x_positions are numbers
             nodeM.y_positions = nodeM.y_positions.map(Number); // Ensure y_positions are numbers
+	    nodeN.widths = nodeN.widths.map(Number); // Ensure y_positions are numbers
+	    nodeN.heights = nodeN.heights.map(Number); // Ensure y_positions are numbers
             nodeM.connections = record.get('m_connections'); // Add connections property
 
             // Duplicate nodes for each position within the viewport
             nodeM.x_positions.forEach((x, index) => {
                 if (x >= x0 && x <= x1 && nodeM.y_positions[index] >= y0 && nodeM.y_positions[index] <= y1) {
-                    const nodeCopy = { ...nodeM, x: x, y: nodeM.y_positions[index], instance: index };
+                    const nodeCopy = { ...nodeM, x: x, y: nodeM.y_positions[index], width: nodeN.widths[index], height: nodeN.heights[index], instance: index };
                     nodes.push(nodeCopy);
                 }
             });
@@ -652,57 +579,6 @@ async function fetchNodesAndLinks(x0, x1, y0, y1) {
     return { nodes, links };
 }
 
-	/*
-async function fetchNodesAndLinks(x0, x1, y0, y1) {
-    const session = driver.session();
-    const result = await session.run(
-        `MATCH (n)
-         WHERE n.x >= $x0 AND n.x <= $x1
-           AND n.y >= $y0 AND n.y <= $y1
-         OPTIONAL MATCH (n)-[r]->(m)
-         WHERE m.x >= $x0 AND m.x <= $x1
-           AND m.y >= $y0 AND m.y <= $y1
-         RETURN n, r, m,
-                size((n)--()) AS n_connections,
-                size((m)--()) AS m_connections`,
-        { x0, x1, y0, y1 }
-    );
-    session.close();
-    nodes = []; // Reset nodes array
-    links = []; // Reset links array
-
-    result.records.forEach(record => {
-        const nodeN = record.get('n').properties;
-        nodeN.x = Number(nodeN.x); // Ensure x is a number
-        nodeN.y = Number(nodeN.y); // Ensure y is a number
-        nodeN.connections = record.get('n_connections'); // Add connections property
-        nodes.push(nodeN);
-
-        const nodeM = record.get('m') ? record.get('m').properties : null;
-        if (nodeM) {
-            nodeM.x = Number(nodeM.x); // Ensure x is a number
-            nodeM.y = Number(nodeM.y); // Ensure y is a number
-            nodeM.connections = record.get('m_connections'); // Add connections property
-            nodes.push(nodeM);
-        }
-
-        const relationship = record.get('r');
-        if (relationship) {
-            const source = nodeN.id;
-            const target = nodeM.id;
-            const type = relationship.type; // Get the relationship type
-            links.push({
-                source,
-                target,
-                type
-            });
-        }
-    });
-
-    return { nodes, links };
-}
-*/
-
         async function fetchNodeById(nodeId) {
             const session = driver.session();
             const result = await session.run(
@@ -721,44 +597,6 @@ async function fetchNodesAndLinks(x0, x1, y0, y1) {
             node.y = Number(node.y);
             return node;
         }
-
-/*async function fetchNodeConnections(nodeId) {
-    const session = driver.session();
-
-    const resultTo = await session.run(
-        `MATCH (n {id: $nodeId})-[r]->(m)
-         RETURN m, size((m)--()) AS m_connections`,
-        { nodeId }
-    );
-    const resultFrom = await session.run(
-        `MATCH (n)<-[r]-(m)
-         WHERE n.id = $nodeId
-         RETURN m, size((m)--()) AS m_connections`,
-        { nodeId }
-    );
-    session.close();
-
-    const connectionsTo = [];
-    const connectionsFrom = [];
-
-    resultTo.records.forEach(record => {
-        const node = record.get('m').properties;
-        node.x = Number(node.x);
-        node.y = Number(node.y);
-        node.connections = record.get('m_connections'); // Add connections property
-        connectionsTo.push(node);
-    });
-
-    resultFrom.records.forEach(record => {
-        const node = record.get('m').properties;
-        node.x = Number(node.x);
-        node.y = Number(node.y);
-        node.connections = record.get('m_connections'); // Add connections property
-        connectionsFrom.push(node);
-    });
-
-    return { connectionsTo, connectionsFrom };
-    }*/
 
 async function fetchNodeConnections(nodeId) {
     const session = driver.session();
@@ -783,6 +621,8 @@ async function fetchNodeConnections(nodeId) {
         const node = record.get('m').properties;
         const xPositions = node.x_positions;
         const yPositions = node.y_positions;
+	const widths = node.widths;
+        const height = node.heights;
         const connectionsCount = record.get('m_connections');
 
         if (Array.isArray(xPositions) && Array.isArray(yPositions) && xPositions.length === yPositions.length) {
@@ -792,6 +632,8 @@ async function fetchNodeConnections(nodeId) {
                     ...node,
                     x: Number(x),
                     y: Number(y),
+		    width: Number(widths[index]),
+		    height: Number(height[index]),
                     instance: index,
                     connections: connectionsCount
                 });
@@ -802,6 +644,8 @@ async function fetchNodeConnections(nodeId) {
                 ...node,
                 x: null,
                 y: null,
+		width: null,
+		height: null,
                 instance: null,
                 connections: connectionsCount
             });
@@ -848,21 +692,68 @@ async function updateNodePosition(id, x, y, instance) {
 }
 
 
+async function updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, background, code) {
+    const session = driver.session();
+    
+    try {
+        const result = await session.run(
+            `MATCH (n {id: $id})
+             RETURN n.x_positions AS x_positions, n.y_positions AS y_positions, n.widths AS widths, n.heights AS heights`,
+            { id }
+        );
 
-
-
-async function updateNodeProperties(id, label, url, imageUrl, x, y, background, code) {
-            const session = driver.session();
-            await session.run(
-                `MATCH (n {id: $id})
-                 SET n.label = $label, n.url = $url, n.imageUrl = $imageUrl, n.x = $x, n.y = $y, n.background = $background, n.code = $code`,
-                { id, label, url, imageUrl, x, y, background, code }
-            );
-            session.close();
+        if (result.records.length === 0) {
+            throw new Error(`Node with id ${id} not found`);
         }
+
+        const node = result.records[0];
+        let x_positions = node.get('x_positions') || [];
+        let y_positions = node.get('y_positions') || [];
+        let widths = node.get('widths') || [];
+        let heights = node.get('heights') || [];
+
+        // Update specific instance index
+        x_positions[instance] = x;
+        y_positions[instance] = y;
+        widths[instance] = width;
+        heights[instance] = height;
+
+        await session.run(
+            `MATCH (n {id: $id})
+             SET n.label = $label, 
+                 n.url = $url, 
+                 n.imageUrl = $imageUrl, 
+                 n.x_positions = $x_positions, 
+                 n.y_positions = $y_positions, 
+                 n.widths = $widths, 
+                 n.heights = $heights, 
+                 n.background = $background, 
+                 n.code = $code`,
+            { 
+                id, 
+                label, 
+                url, 
+                imageUrl, 
+                x_positions, 
+                y_positions, 
+                widths, 
+                heights, 
+                background, 
+                code 
+            }
+        );
+    } finally {
+        await session.close();
+    }
+}
+
+
 
 async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
     console.log("CREATED FROM", sourceId)
+    const width = 0;
+    const height = 0;
+    const type = "node";
     const session = driver.session();
     const result = await session.run(
         `MATCH (source {id: $sourceId})
@@ -872,6 +763,9 @@ async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
              y: $y,
              x_positions: [$x],
              y_positions: [$y],
+             widths: [$width],
+             heights: [$height],
+             type: $type,
              background: 'rgb(255,219,0)',
              label: $label,
              url: $url,
@@ -879,73 +773,21 @@ async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
          })
          CREATE (source)-[:CONNECTED_TO]->(newNode)
          RETURN newNode`,
-        { sourceId, x, y, label, url, imageUrl }
+        { sourceId, x, y, width, height, type, label, url, imageUrl }
     );
     session.close();
     return result.records[0].get('newNode').properties;
 }
 
 /*
-async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
-            const session = driver.session();
-            const result = await session.run(
-                `MATCH (source {id: $sourceId})
-                 CREATE (newNode {id: randomUUID(), x: $x, y: $y, background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
-                 CREATE (source)-[:CONNECTED_TO]->(newNode)
-                 RETURN newNode`,
-                { sourceId, x, y, label, url, imageUrl}
-            );
-            session.close();
-            return result.records[0].get('newNode').properties;
-}
-*/
-/*
-async function createOrphanNode(x, y) {
-    const userInput = await openSearch('Create a new orphan node (TODO: Work with existing nodes)');
-    
-    let label = userInput.label;
-    let url = "";
-    let imageUrl = ""
-    
-    if (isValidLink(label) === true) {
-	label = await fetchPageTitle(label);
-	url = label;
-	//imageUrl = await getFavicon(label);
-    }
-    
-    if (isYouTubeLink(userInput.label) === true) {
-	imageUrl = getYouTubeThumbnail(userInput.label);
-	url = userInput.label;
-    }
-    
-    
-    if (label) {
-	if (!userInput.exists) {
-	    
-	    const session = driver.session();
-	    const result = await session.run(
-		`CREATE (newNode {id: randomUUID(), x: $x, y: $y, background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
-         RETURN newNode`,
-		{ x, y, label, url, imageUrl }
-	    );
-	    session.close();
-	    return result.records[0].get('newNode').properties;
-	    
-	} else {
-	    //TODO make a link to an existing node
-	    //await connectToNode(d.id, nodeTo=label);
-	}
-        drawNodesAndLinks(cur_trans);
-    }
-
-}*/
-
 async function createOrphanNode(x, y) {
     const userInput = await openSearch('Create a new orphan node');
     
     let label = userInput.label;
     let url = "";
     let imageUrl = "";
+    let width = 0;
+    let height = 0;
     
     if (isValidLink(label)) {
         label = await fetchPageTitle(label);
@@ -982,9 +824,9 @@ async function createOrphanNode(x, y) {
         } else {
             // Create a new node with x_positions and y_positions arrays
             const result = await session.run(
-                `CREATE (newNode {id: randomUUID(), x_positions: [$x], y_positions: [$y], background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
+                `CREATE (newNode {id: randomUUID(), x_positions: [$x], y_positions: [$y], widths: [$width], heights: $[height], background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
                  RETURN newNode`,
-                { x, y, label, url, imageUrl }
+                { x, y, width, height, label, url, imageUrl }
             );
             session.close();
             return result.records[0].get('newNode').properties;
@@ -993,6 +835,123 @@ async function createOrphanNode(x, y) {
         drawNodesAndLinks(cur_trans);
     }
 }
+*/
+
+async function createOrphanNode(x, y) {
+    const userInput = await openSearch('Create a new orphan node');
+    
+    let label = userInput.label;
+    let url = "";
+    let imageUrl = "";
+    let width = 0;  // Set default width
+    let height = 0; // Set default height
+    
+    if (isValidLink(label)) {
+        label = await fetchPageTitle(label);
+        url = userInput.label;
+        // imageUrl = await getFavicon(label);
+    }
+    
+    if (isYouTubeLink(userInput.label)) {
+        imageUrl = getYouTubeThumbnail(userInput.label);
+        url = userInput.label;
+    }
+    
+    if (label) {
+        const session = driver.session();
+        
+        // Check if the node already exists
+        const checkResult = await session.run(
+            `MATCH (existingNode {label: $label})
+             RETURN existingNode`,
+            { label }
+        );
+        
+        if (checkResult.records.length > 0) {
+            // Append to existing node's x_positions, y_positions, widths, and heights arrays
+            const result = await session.run(
+                `MATCH (existingNode {label: $label})
+                 SET existingNode.x_positions = coalesce(existingNode.x_positions, []) + $x,
+                     existingNode.y_positions = coalesce(existingNode.y_positions, []) + $y,
+                     existingNode.widths = coalesce(existingNode.widths, []) + $width,
+                     existingNode.heights = coalesce(existingNode.heights, []) + $height
+                 RETURN existingNode`,
+                { label, x, y, width, height }
+            );
+            session.close();
+            return result.records[0].get('existingNode').properties;
+        } else {
+            // Create a new node with x_positions, y_positions, widths, and heights arrays
+            const result = await session.run(
+                `CREATE (newNode {id: randomUUID(), x_positions: [$x], y_positions: [$y], widths: [$width], heights: [$height], background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
+                 RETURN newNode`,
+                { x, y, width, height, label, url, imageUrl }
+            );
+            session.close();
+            return result.records[0].get('newNode').properties;
+        }
+        
+        drawNodesAndLinks(cur_trans);
+    }
+}
+
+
+async function createGroupingBoxNode(x, y, width, height) {
+    const userInput = await openSearch('Create a new grouping box node');
+    
+    let label = userInput.label;
+    let url = "";
+    let imageUrl = "";
+    
+    if (isValidLink(label)) {
+        label = await fetchPageTitle(label);
+        url = userInput.label;
+        // imageUrl = await getFavicon(label);
+    }
+    
+    if (isYouTubeLink(userInput.label)) {
+        imageUrl = getYouTubeThumbnail(userInput.label);
+        url = userInput.label;
+    }
+    
+    if (label) {
+        const session = driver.session();
+        
+        // Check if the node already exists
+        const checkResult = await session.run(
+            `MATCH (existingNode {label: $label})
+             RETURN existingNode`,
+            { label }
+        );
+        
+        if (checkResult.records.length > 0) {
+            // Append to existing node's x_positions, y_positions, widths, and heights arrays
+            const result = await session.run(
+                `MATCH (existingNode {label: $label})
+                 SET existingNode.x_positions = coalesce(existingNode.x_positions, []) + $x,
+                     existingNode.y_positions = coalesce(existingNode.y_positions, []) + $y,
+                     existingNode.widths = coalesce(existingNode.widths, []) + $width,
+                     existingNode.heights = coalesce(existingNode.heights, []) + $height
+                 RETURN existingNode`,
+                { label, x, y, width, height }
+            );
+            session.close();
+            return result.records[0].get('existingNode').properties;
+        } else {
+            // Create a new node with x_positions, y_positions, widths, heights arrays, and type grouping_box
+            const result = await session.run(
+                `CREATE (newNode {id: randomUUID(), x_positions: [$x], y_positions: [$y], widths: [$width], heights: [$height], background: 'rgb(255,219,0]', label: $label, url: $url, imageUrl: $imageUrl, type: 'grouping_box'})
+                 RETURN newNode`,
+                { x, y, width, height, label, url, imageUrl }
+            );
+            session.close();
+            return result.records[0].get('newNode').properties;
+        }
+        
+        drawNodesAndLinks(cur_trans);
+    }
+}
+
 
 
 
@@ -1151,1149 +1110,6 @@ async function createRelationship(sourceId, targetId, type = "CONNECTED_TO") {
     session.close();
 }
 
-
-/*
-function updateLinksAndNodes() {
-    // Define arrowhead markers for links
-    svg.selectAll("defs").remove(); // Remove existing definitions
-    const defs = svg.append("defs");
-    defs.append("marker")
-        .attr("id", "arrowhead")
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 5)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L10,0L0,5")
-        .attr("fill", "#999");
-
-    // Function to calculate the new end coordinates for the arrowhead
-    function getNewEndCoordinates(sourceX, sourceY, targetX, targetY, radius) {
-        const dx = targetX - sourceX;
-        const dy = targetY - sourceY;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        const scale = (length - radius) / length;
-        const newTargetX = sourceX + dx * scale;
-        const newTargetY = sourceY + dy * scale;
-        return { x: newTargetX, y: newTargetY };
-    }
-
-    // Helper function to create all possible link instances
-function createLinkData(nodes, links) {
-    const newLinks = [];
-    links.forEach(link => {
-        const sourceNode = nodes.find(n => n.id === link.source);
-        const targetNode = nodes.find(n => n.id === link.target);
-        sourceNode.x_positions.forEach((_, sourceInstance) => {
-            targetNode.x_positions.forEach((_, targetInstance) => {
-                newLinks.push({
-                    ...link,
-                    sourceInstance,
-                    targetInstance
-                });
-            });
-        });
-    });
-    return newLinks;
-}
-
-// Assuming nodes and links are defined somewhere before this
-const updatedLinks = createLinkData(nodes, links);
-
-// Update links
-const link = linkLayer.selectAll("line").data(updatedLinks, d => `${d.source}-${d.target}-${d.sourceInstance}-${d.targetInstance}`);
-
-link.exit().remove();
-
-link.enter()
-    .append("line")
-    .merge(link)
-    .attr("stroke", "#999")
-    .attr("stroke-width", 2)
-    .attr("marker-end", "url(#arrowhead)")
-    .attr("x1", d => {
-        const sourceNode = nodes.find(n => n.id === d.source);
-        return sourceNode.x_positions[d.sourceInstance];
-    })
-    .attr("y1", d => {
-        const sourceNode = nodes.find(n => n.id === d.source);
-        return sourceNode.y_positions[d.sourceInstance];
-    })
-    .attr("x2", d => {
-        const sourceNode = nodes.find(n => n.id === d.source);
-        const targetNode = nodes.find(n => n.id === d.target);
-        const newCoords = getNewEndCoordinates(
-            sourceNode.x_positions[d.sourceInstance],
-            sourceNode.y_positions[d.sourceInstance],
-            targetNode.x_positions[d.targetInstance],
-            targetNode.y_positions[d.targetInstance],
-            10 // Assuming 10 is the radius of the nodes
-        );
-        return newCoords.x;
-    })
-    .attr("y2", d => {
-        const sourceNode = nodes.find(n => n.id === d.source);
-        const targetNode = nodes.find(n => n.id === d.target);
-        const newCoords = getNewEndCoordinates(
-            sourceNode.x_positions[d.sourceInstance],
-            sourceNode.y_positions[d.sourceInstance],
-            targetNode.x_positions[d.targetInstance],
-            targetNode.y_positions[d.targetInstance],
-            10
-        );
-        return newCoords.y;
-    });
-
-    // Update link labels
-const linkLabel = linkLayer.selectAll(".link-label").data(updatedLinks, d => `${d.source}-${d.target}-${d.sourceInstance}-${d.targetInstance}`);
-
-linkLabel.exit().remove();
-
-linkLabel.enter()
-    .append("text")
-    .attr("class", "link-label")
-    .merge(linkLabel)
-    .attr("x", d => {
-        const sourceNode = nodes.find(n => n.id === d.source);
-        const targetNode = nodes.find(n => n.id === d.target);
-        return (sourceNode.x_positions[d.sourceInstance] + targetNode.x_positions[d.targetInstance]) / 2;
-    })
-    .attr("y", d => {
-        const sourceNode = nodes.find(n => n.id === d.source);
-        const targetNode = nodes.find(n => n.id === d.target);
-        return (sourceNode.y_positions[d.sourceInstance] + targetNode.y_positions[d.targetInstance]) / 2;
-    })
-    .attr("fill", "#eee")
-    .attr("font-size", "10px")
-    .attr("text-anchor", "middle")
-    .attr("dy", -5) // Adjust the position slightly above the link
-    .text(d => d.type === "CONNECTED_TO" ? "✦" : d.type)
-    .on("dblclick", async function (event, d) {
-        const newType = prompt("Enter new relationship type:", d.type);
-        if (newType) {
-            await updateRelationshipType(d.source, d.target, newType);
-            d.type = newType;
-            drawGrid(cur_trans);
-            drawNodesAndLinks(cur_trans);
-        }
-    })
-    .on("contextmenu", async function (event, d) {
-        event.preventDefault();
-        const confirmed = confirm("Do you want to delete this interconnection?");
-        if (confirmed) {
-            await deleteRelationship(d.source, d.target);
-            links = links.filter(link => link.source !== d.source || link.target !== d.target);
-            drawGrid(cur_trans);
-            drawNodesAndLinks(cur_trans);
-        }
-    });
-
-
-    
-    // Separate nodes with and without image URLs
-    const nodesWithImages = nodes.filter(d => d.imageUrl);
-    const nodesWithoutImages = nodes.filter(d => !d.imageUrl);
-
-    // Update circles
-    const circle = nodeLayer.selectAll("circle").data(nodesWithoutImages, d => d.id);
-
-    circle.exit().remove();
-
-    circle.enter()
-        .append("circle")
-        .attr("r", 10)  // Adjust radius as needed
-        .merge(circle)
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y)
-        .attr("fill", d => connectionsToColor(d.connections) || "red")
-        .on("mousedown", async function (event, d) {
-            selectNode(d);
-        })
-        .call(d3.drag()
-            .on("start", function (event, d) {
-                d3.select(this).raise().attr("stroke", "black");
-            })
-            .on("drag", function (event, d) {
-                d3.select(this).attr("cx", d.x = event.x).attr("cy", d.y = event.y);
-                
-                // Update the node's position in the nodes array
-                nodes.find(n => n.id === d.id).x = d.x;
-                nodes.find(n => n.id === d.id).y = d.y;
-
-                // Update the links connected to the node during dragging
-                linkLayer.selectAll("line")
-                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
-                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
-                    .attr("x2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.x;
-                    })
-                    .attr("y2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.y;
-                    });
-
-                // Update link labels position during dragging
-                linkLayer.selectAll(".link-label")
-                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
-                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
-                
-                // Update labels position during dragging
-                nodeLayer.selectAll("text")
-                    .attr("x", d => d.imageUrl ? d.x + 30 : d.x + 10)
-                    .attr("y", d => d.imageUrl ? d.y + 10 : d.y);
-                
-                // Update inspector with current position
-                document.getElementById("nodeX").value = d.x;
-                document.getElementById("nodeY").value = d.y;
-            })
-            .on("end", async function (event, d) {
-                d3.select(this).attr("stroke", null);
-                await updateNodePosition(d.id, d.x, d.y, d.instance);
-
-                // Update the node's position in the nodes array
-                nodes.find(n => n.id === d.id).x = d.x;
-                nodes.find(n => n.id === d.id).y = d.y;
-
-                // Update the links connected to the node after dragging ends
-                linkLayer.selectAll("line")
-                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
-                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
-                    .attr("x2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.x;
-                    })
-                    .attr("y2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.y;
-                    });
-
-                // Update link labels position after dragging ends
-                linkLayer.selectAll(".link-label")
-                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
-                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
-
-                // Update labels position after dragging ends
-                nodeLayer.selectAll("text")
-                    .attr("x", d => d.imageUrl ? d.x + 30 : d.x + 10)
-                    .attr("y", d => d.imageUrl ? d.y + 10 : d.y);
-            })
-        )
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this node?");
-            if (confirmed) {
-                await deleteNode(d.id);
-                
-                // Remove the node and its related links from the data
-                nodes = nodes.filter(node => node.id !== d.id);
-                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
-                
-                // Redraw the grid and nodes/links
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("dblclick", async function (event, d) {
-            const newX = d.x + 20; // New node's X coordinate
-            const newY = d.y + 20; // New node's Y coordinate
-            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
-            
-            let label = userInput.label;
-            let url = "";
-	    let imageUrl = ""
-
-	    if (isValidLink(label) === true) {
-		label = await fetchPageTitle(label);
-		url = label;
-		//imageUrl = await getFavicon(label);
-	    }
-	    
-	    if (isYouTubeLink(userInput.label) === true) {
-		imageUrl = getYouTubeThumbnail(userInput.label);
-		url = userInput.label;
-	    }
-            
-            
-            if (label) {
-		if (!userInput.exists) {
-                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
-		} else {
-		    await connectToNode(d.id, nodeTo=label);
-		}
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Update images
-    const image = nodeLayer.selectAll("image").data(nodesWithImages, d => d.id);
-
-    image.exit().remove();
-
-    image.enter()
-        .append("image")
-        .attr("width", 40)  // Adjust width as needed
-        .attr("height", 40) // Adjust height as needed
-        .attr("x", d => d.x - 20)  // Adjust x position as needed
-        .attr("y", d => d.y - 20)  // Adjust y position as needed
-        .attr("xlink:href", d => d.imageUrl)
-        .merge(image)
-        .attr("x", d => d.x - 20)  // Adjust x position as needed
-        .attr("y", d => d.y - 20)  // Adjust y position as needed
-        .on("mousedown", async function (event, d) {
-            selectNode(d);
-        })
-        .call(d3.drag()
-            .on("start", function (event, d) {
-                d3.select(this).raise().attr("stroke", "black");
-            })
-            .on("drag", function (event, d) {
-                d3.select(this).attr("x", d.x = event.x - 20).attr("y", d.y = event.y - 20);
-                
-                // Update the node's position in the nodes array
-                nodes.find(n => n.id === d.id).x = d.x + 20;
-                nodes.find(n => n.id === d.id).y = d.y + 20;
-
-                // Update the links connected to the node during dragging
-                linkLayer.selectAll("line")
-                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
-                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
-                    .attr("x2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.x;
-                    })
-                    .attr("y2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.y;
-                    });
-
-                // Update link labels position during dragging
-                linkLayer.selectAll(".link-label")
-                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
-                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
-                
-                // Update labels position during dragging
-                nodeLayer.selectAll("text")
-                    .attr("x", d => d.x + 30)
-                    .attr("y", d => d.y + 10);
-                
-                // Update inspector with current position
-                document.getElementById("nodeX").value = d.x + 20;
-                document.getElementById("nodeY").value = d.y + 20;
-            })
-            .on("end", async function (event, d) {
-                d3.select(this).attr("stroke", null);
-                await updateNodePosition(d.id, d.x + 20, d.y + 20, d.instance);
-
-                // Update the node's position in the nodes array
-                nodes.find(n => n.id === d.id).x = d.x + 20;
-                nodes.find(n => n.id === d.id).y = d.y + 20;
-
-                // Update the links connected to the node after dragging ends
-                linkLayer.selectAll("line")
-                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
-                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
-                    .attr("x2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.x;
-                    })
-                    .attr("y2", l => {
-                        const sourceNode = nodes.find(n => n.id === l.source);
-                        const targetNode = nodes.find(n => n.id === l.target);
-                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
-                        return newCoords.y;
-                    });
-
-                // Update link labels position after dragging ends
-                linkLayer.selectAll(".link-label")
-                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
-                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
-
-                // Update labels position after dragging ends
-                nodeLayer.selectAll("text")
-                    .attr("x", d => d.x + 30)
-                    .attr("y", d => d.y + 10);
-            })
-        )
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this node?");
-            if (confirmed) {
-                await deleteNode(d.id);
-                
-                // Remove the node and its related links from the data
-                nodes = nodes.filter(node => node.id !== d.id);
-                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
-                
-                // Redraw the grid and nodes/links
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("dblclick", async function (event, d) {
-            const newX = d.x + 20; // New node's X coordinate
-            const newY = d.y + 20; // New node's Y coordinate
-            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
-            
-            let label = userInput.label;
-            let url = "";
-	    let imageUrl= ""
-	    
-	    if (isValidLink(label) === true) {
-		label = await fetchPageTitle(label);
-		url = label;
-		//imageUrl = await getFavicon(label);
-	    }
-	    
-	    if (isYouTubeLink(userInput.label) === true) {
-		imageUrl = getYouTubeThumbnail(userInput.label);
-		url = userInput.label
-	    }
-            
-            if (label) {
-		if (!userInput.exists) {
-                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
-		} else {
-		    await connectToNode(d.id, nodeTo=label);
-		}
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Update labels
-    const labels = nodeLayer.selectAll("text").data(nodes, d => d.id);
-
-    labels.exit().remove();
-
-    labels.enter()
-        .append("text")
-        .merge(labels)
-        .attr("x", d => d.imageUrl ? d.x + 30 : d.x + 10)  // Adjust x position based on node type
-        .attr("y", d => d.imageUrl ? d.y + 10 : d.y)
-        .text(d => d.label)
-        .attr("font-size", "12px")
-        .attr("fill", "#eee");
-}
-*/
-
-
-/*
-  //V2
-function updateLinksAndNodes() {
-    // Define arrowhead markers for links
-    svg.selectAll("defs").remove(); // Remove existing definitions
-    const defs = svg.append("defs");
-    defs.append("marker")
-        .attr("id", "arrowhead")
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 5)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L10,0L0,5")
-        .attr("fill", "#999");
-
-    // Function to calculate the new end coordinates for the arrowhead
-    function getNewEndCoordinates(sourceX, sourceY, targetX, targetY, radius) {
-        const dx = targetX - sourceX;
-        const dy = targetY - sourceY;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        const scale = (length - radius) / length;
-        const newTargetX = sourceX + dx * scale;
-        const newTargetY = sourceY + dy * scale;
-        return { x: newTargetX, y: newTargetY };
-    }
-
-    // Helper function to create all possible link instances
-    function createLinkData(nodes, links) {
-        const newLinks = [];
-        links.forEach(link => {
-            const sourceNode = nodes.find(n => n.id === link.source);
-            const targetNode = nodes.find(n => n.id === link.target);
-            sourceNode.x_positions.forEach((_, sourceInstance) => {
-                targetNode.x_positions.forEach((_, targetInstance) => {
-                    newLinks.push({
-                        ...link,
-                        sourceInstance,
-                        targetInstance
-                    });
-                });
-            });
-        });
-        return newLinks;
-    }
-
-    // Assuming nodes and links are defined somewhere before this
-    const updatedLinks = createLinkData(nodes, links);
-
-    // Update links
-    const link = linkLayer.selectAll("line").data(updatedLinks, d => `${d.source}-${d.target}-${d.sourceInstance}-${d.targetInstance}`);
-
-    link.exit().remove();
-
-    link.enter()
-        .append("line")
-        .merge(link)
-        .attr("stroke", "#999")
-        .attr("stroke-width", 2)
-        .attr("marker-end", "url(#arrowhead)")
-        .attr("x1", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            return sourceNode.x_positions[d.sourceInstance];
-        })
-        .attr("y1", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            return sourceNode.y_positions[d.sourceInstance];
-        })
-        .attr("x2", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            const newCoords = getNewEndCoordinates(
-                sourceNode.x_positions[d.sourceInstance],
-                sourceNode.y_positions[d.sourceInstance],
-                targetNode.x_positions[d.targetInstance],
-                targetNode.y_positions[d.targetInstance],
-                10 // Assuming 10 is the radius of the nodes
-            );
-            return newCoords.x;
-        })
-        .attr("y2", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            const newCoords = getNewEndCoordinates(
-                sourceNode.x_positions[d.sourceInstance],
-                sourceNode.y_positions[d.sourceInstance],
-                targetNode.x_positions[d.targetInstance],
-                targetNode.y_positions[d.targetInstance],
-                10
-            );
-            return newCoords.y;
-        });
-
-    // Update link labels
-    const linkLabel = linkLayer.selectAll(".link-label").data(updatedLinks, d => `${d.source}-${d.target}-${d.sourceInstance}-${d.targetInstance}`);
-
-    linkLabel.exit().remove();
-
-    linkLabel.enter()
-        .append("text")
-        .attr("class", "link-label")
-        .merge(linkLabel)
-        .attr("x", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            return (sourceNode.x_positions[d.sourceInstance] + targetNode.x_positions[d.targetInstance]) / 2;
-        })
-        .attr("y", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            return (sourceNode.y_positions[d.sourceInstance] + targetNode.y_positions[d.targetInstance]) / 2;
-        })
-        .attr("fill", "#eee")
-        .attr("font-size", "10px")
-        .attr("text-anchor", "middle")
-        .attr("dy", -5) // Adjust the position slightly above the link
-        .text(d => d.type === "CONNECTED_TO" ? "✦" : d.type)
-        .on("dblclick", async function (event, d) {
-            const newType = prompt("Enter new relationship type:", d.type);
-            if (newType) {
-                await updateRelationshipType(d.source, d.target, newType);
-                d.type = newType;
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this interconnection?");
-            if (confirmed) {
-                await deleteRelationship(d.source, d.target);
-                links = links.filter(link => link.source !== d.source || link.target !== d.target);
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Separate nodes with and without image URLs
-    const nodesWithImages = nodes.filter(d => d.imageUrl);
-    const nodesWithoutImages = nodes.filter(d => !d.imageUrl);
-
-    function updateNodePositionAndLinks(d) {
-        // Update the node's position in the nodes array
-        nodes.find(n => n.id === d.id).x_positions[d.instance] = d.x;
-        nodes.find(n => n.id === d.id).y_positions[d.instance] = d.y;
-
-        // Update the links connected to the node
-        linkLayer.selectAll("line")
-            .attr("x1", l => nodes.find(n => n.id === l.source).x_positions[l.sourceInstance])
-            .attr("y1", l => nodes.find(n => n.id === l.source).y_positions[l.sourceInstance])
-            .attr("x2", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                const newCoords = getNewEndCoordinates(sourceNode.x_positions[l.sourceInstance], sourceNode.y_positions[l.sourceInstance], targetNode.x_positions[l.targetInstance], targetNode.y_positions[l.targetInstance], 10);
-                return newCoords.x;
-            })
-            .attr("y2", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                const newCoords = getNewEndCoordinates(sourceNode.x_positions[l.sourceInstance], sourceNode.y_positions[l.sourceInstance], targetNode.x_positions[l.targetInstance], targetNode.y_positions[l.targetInstance], 10);
-                return newCoords.y;
-            });
-
-        // Update link labels position
-        linkLayer.selectAll(".link-label")
-            .attr("x", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                return (sourceNode.x_positions[l.sourceInstance] + targetNode.x_positions[l.targetInstance]) / 2;
-            })
-            .attr("y", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                return (sourceNode.y_positions[l.sourceInstance] + targetNode.y_positions[l.targetInstance]) / 2;
-            });
-
-        // Update labels position
-        nodeLayer.selectAll("text")
-            .attr("x", t => t.imageUrl ? t.x_positions[t.instance] + 30 : t.x_positions[t.instance] + 10)
-            .attr("y", t => t.imageUrl ? t.y_positions[t.instance] + 10 : t.y_positions[t.instance]);
-    }
-
-    function setupDragBehavior(selection) {
-        selection.call(d3.drag()
-            .on("start", function (event, d) {
-                d3.select(this).raise().attr("stroke", "black");
-            })
-            .on("drag", function (event, d) {
-                d3.select(this)
-                    .attr("cx", d.x = event.x)
-                    .attr("cy", d.y = event.y)
-                    .attr("x", d.x = event.x - 20)  // Adjust x for image
-                    .attr("y", d.y = event.y - 20); // Adjust y for image
-
-                updateNodePositionAndLinks(d);
-
-                // Update inspector with current position
-                document.getElementById("nodeX").value = d.x;
-                document.getElementById("nodeY").value = d.y;
-            })
-            .on("end", async function (event, d) {
-                d3.select(this).attr("stroke", null);
-                await updateNodePosition(d.id, d.x, d.y, d.instance);
-
-                updateNodePositionAndLinks(d);
-            })
-        );
-    }
-
-    // Update circles
-    const circle = nodeLayer.selectAll("circle").data(nodesWithoutImages, d => d.id);
-
-    circle.exit().remove();
-
-    circle.enter()
-        .append("circle")
-        .attr("r", 10)  // Adjust radius as needed
-        .merge(circle)
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y)
-        .attr("fill", d => connectionsToColor(d.connections) || "red")
-        .on("mousedown", async function (event, d) {
-            selectNode(d);
-        })
-        .call(setupDragBehavior)
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this node?");
-            if (confirmed) {
-                await deleteNode(d.id);
-                
-                // Remove the node and its related links from the data
-                nodes = nodes.filter(node => node.id !== d.id);
-                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
-                
-                // Redraw the grid and nodes/links
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("dblclick", async function (event, d) {
-            const newX = d.x + 20; // New node's X coordinate
-            const newY = d.y + 20; // New node's Y coordinate
-            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
-            
-            let label = userInput.label;
-            let url = "";
-            let imageUrl = ""
-
-            if (isValidLink(label) === true) {
-                label = await fetchPageTitle(label);
-                url = label;
-                //imageUrl = await getFavicon(label);
-            }
-
-            if (isYouTubeLink(userInput.label) === true) {
-                imageUrl = getYouTubeThumbnail(userInput.label);
-                url = userInput.label;
-            }
-            
-            if (label) {
-                if (!userInput.exists) {
-                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
-                } else {
-                    await connectToNode(d.id, nodeTo=label);
-                }
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Update images
-    const image = nodeLayer.selectAll("image").data(nodesWithImages, d => d.id);
-
-    image.exit().remove();
-
-    image.enter()
-        .append("image")
-        .attr("width", 40)  // Adjust width as needed
-        .attr("height", 40) // Adjust height as needed
-        .attr("x", d => d.x - 20)  // Adjust x position as needed
-        .attr("y", d => d.y - 20)  // Adjust y position as needed
-        .attr("xlink:href", d => d.imageUrl)
-        .merge(image)
-        .call(setupDragBehavior)
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this node?");
-            if (confirmed) {
-                await deleteNode(d.id);
-                
-                // Remove the node and its related links from the data
-                nodes = nodes.filter(node => node.id !== d.id);
-                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
-                
-                // Redraw the grid and nodes/links
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("dblclick", async function (event, d) {
-            const newX = d.x + 20; // New node's X coordinate
-            const newY = d.y + 20; // New node's Y coordinate
-            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
-            
-            let label = userInput.label;
-            let url = "";
-            let imageUrl = ""
-
-            if (isValidLink(label) === true) {
-                label = await fetchPageTitle(label);
-                url = label;
-                //imageUrl = await getFavicon(label);
-            }
-
-            if (isYouTubeLink(userInput.label) === true) {
-                imageUrl = getYouTubeThumbnail(userInput.label);
-                url = userInput.label;
-            }
-            
-            if (label) {
-                if (!userInput.exists) {
-                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
-                } else {
-                    await connectToNode(d.id, nodeTo=label);
-                }
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Update labels
-    const labels = nodeLayer.selectAll("text").data(nodes, d => d.id);
-
-    labels.exit().remove();
-
-    labels.enter()
-        .append("text")
-        .merge(labels)
-        .attr("x", d => d.imageUrl ? d.x + 30 : d.x + 10)  // Adjust x position based on node type
-        .attr("y", d => d.imageUrl ? d.y + 10 : d.y)
-        .text(d => d.label)
-        .attr("font-size", "12px")
-        .attr("fill", "#eee");
-}
-*/
-
-/*
-
-// V3
-function updateLinksAndNodes() {
-    // Define arrowhead markers for links
-    svg.selectAll("defs").remove(); // Remove existing definitions
-    const defs = svg.append("defs");
-    defs.append("marker")
-        .attr("id", "arrowhead")
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 5)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("d", "M0,-5L10,0L0,5")
-        .attr("fill", "#999");
-
-    // Function to calculate the new end coordinates for the arrowhead
-    function getNewEndCoordinates(sourceX, sourceY, targetX, targetY, radius) {
-        const dx = targetX - sourceX;
-        const dy = targetY - sourceY;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        const scale = (length - radius) / length;
-        const newTargetX = sourceX + dx * scale;
-        const newTargetY = sourceY + dy * scale;
-        return { x: newTargetX, y: newTargetY };
-    }
-
-    // Helper function to create all possible link instances
-    function createLinkData(nodes, links) {
-        const newLinks = [];
-        links.forEach(link => {
-            const sourceNode = nodes.find(n => n.id === link.source);
-            const targetNode = nodes.find(n => n.id === link.target);
-            sourceNode.x_positions.forEach((_, sourceInstance) => {
-                targetNode.x_positions.forEach((_, targetInstance) => {
-                    newLinks.push({
-                        ...link,
-                        sourceInstance,
-                        targetInstance
-                    });
-                });
-            });
-        });
-        return newLinks;
-    }
-
-    // Assuming nodes and links are defined somewhere before this
-    const updatedLinks = createLinkData(nodes, links);
-
-    // Update links
-    const link = linkLayer.selectAll("line").data(updatedLinks, d => `${d.source}-${d.target}-${d.sourceInstance}-${d.targetInstance}`);
-
-    link.exit().remove();
-
-    link.enter()
-        .append("line")
-        .merge(link)
-        .attr("stroke", "#999")
-        .attr("stroke-width", 2)
-        .attr("marker-end", "url(#arrowhead)")
-        .attr("x1", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            return sourceNode.x_positions[d.sourceInstance];
-        })
-        .attr("y1", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            return sourceNode.y_positions[d.sourceInstance];
-        })
-        .attr("x2", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            const newCoords = getNewEndCoordinates(
-                sourceNode.x_positions[d.sourceInstance],
-                sourceNode.y_positions[d.sourceInstance],
-                targetNode.x_positions[d.targetInstance],
-                targetNode.y_positions[d.targetInstance],
-                10 // Assuming 10 is the radius of the nodes
-            );
-            return newCoords.x;
-        })
-        .attr("y2", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            const newCoords = getNewEndCoordinates(
-                sourceNode.x_positions[d.sourceInstance],
-                sourceNode.y_positions[d.sourceInstance],
-                targetNode.x_positions[d.targetInstance],
-                targetNode.y_positions[d.targetInstance],
-                10
-            );
-            return newCoords.y;
-        });
-
-    // Update link labels
-    const linkLabel = linkLayer.selectAll(".link-label").data(updatedLinks, d => `${d.source}-${d.target}-${d.sourceInstance}-${d.targetInstance}`);
-
-    linkLabel.exit().remove();
-
-    linkLabel.enter()
-        .append("text")
-        .attr("class", "link-label")
-        .merge(linkLabel)
-        .attr("x", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            return (sourceNode.x_positions[d.sourceInstance] + targetNode.x_positions[d.targetInstance]) / 2;
-        })
-        .attr("y", d => {
-            const sourceNode = nodes.find(n => n.id === d.source);
-            const targetNode = nodes.find(n => n.id === d.target);
-            return (sourceNode.y_positions[d.sourceInstance] + targetNode.y_positions[d.targetInstance]) / 2;
-        })
-        .attr("fill", "#eee")
-        .attr("font-size", "10px")
-        .attr("text-anchor", "middle")
-        .attr("dy", -5) // Adjust the position slightly above the link
-        .text(d => d.type === "CONNECTED_TO" ? "✦" : d.type)
-        .on("dblclick", async function (event, d) {
-            const newType = prompt("Enter new relationship type:", d.type);
-            if (newType) {
-                await updateRelationshipType(d.source, d.target, newType);
-                d.type = newType;
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this interconnection?");
-            if (confirmed) {
-                await deleteRelationship(d.source, d.target);
-                links = links.filter(link => link.source !== d.source || link.target !== d.target);
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Separate nodes with and without image URLs
-    const nodesWithImages = nodes.filter(d => d.imageUrl);
-    const nodesWithoutImages = nodes.filter(d => !d.imageUrl);
-
-    function updateNodePositionAndLinks(d) {
-        // Update the node's position in the nodes array
-        nodes.find(n => n.id === d.id).x_positions[d.instance] = d.x;
-        nodes.find(n => n.id === d.id).y_positions[d.instance] = d.y;
-
-        // Update the links connected to the node
-        linkLayer.selectAll("line")
-            .attr("x1", l => nodes.find(n => n.id === l.source).x_positions[l.sourceInstance])
-            .attr("y1", l => nodes.find(n => n.id === l.source).y_positions[l.sourceInstance])
-            .attr("x2", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                const newCoords = getNewEndCoordinates(sourceNode.x_positions[l.sourceInstance], sourceNode.y_positions[l.sourceInstance], targetNode.x_positions[l.targetInstance], targetNode.y_positions[l.targetInstance], 10);
-                return newCoords.x;
-            })
-            .attr("y2", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                const newCoords = getNewEndCoordinates(sourceNode.x_positions[l.sourceInstance], sourceNode.y_positions[l.sourceInstance], targetNode.x_positions[l.targetInstance], targetNode.y_positions[l.targetInstance], 10);
-                return newCoords.y;
-            });
-
-        // Update link labels position
-        linkLayer.selectAll(".link-label")
-            .attr("x", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                return (sourceNode.x_positions[l.sourceInstance] + targetNode.x_positions[l.targetInstance]) / 2;
-            })
-            .attr("y", l => {
-                const sourceNode = nodes.find(n => n.id === l.source);
-                const targetNode = nodes.find(n => n.id === l.target);
-                return (sourceNode.y_positions[l.sourceInstance] + targetNode.y_positions[l.targetInstance]) / 2;
-            });
-
-        // Update labels position
-        nodeLayer.selectAll("text")
-            .attr("x", t => t.imageUrl ? t.x_positions[t.instance] + 30 : t.x_positions[t.instance] + 10)
-            .attr("y", t => t.imageUrl ? t.y_positions[t.instance] + 10 : t.y_positions[t.instance]);
-
-        // Update circle positions
-        nodeLayer.selectAll("circle")
-            .attr("cx", n => n.x_positions[n.instance])
-            .attr("cy", n => n.y_positions[n.instance]);
-
-        // Update image positions
-        nodeLayer.selectAll("image")
-            .attr("x", n => n.x_positions[n.instance] - 20)
-            .attr("y", n => n.y_positions[n.instance] - 20);
-    }
-
-    function setupDragBehavior(selection) {
-        selection.call(d3.drag()
-            .on("start", function (event, d) {
-                d3.select(this).raise().attr("stroke", "black");
-            })
-            .on("drag", function (event, d) {
-                d.x = event.x;
-                d.y = event.y;
-
-                updateNodePositionAndLinks(d);
-
-                // Update inspector with current position
-                document.getElementById("nodeX").value = d.x;
-                document.getElementById("nodeY").value = d.y;
-            })
-            .on("end", async function (event, d) {
-                d3.select(this).attr("stroke", null);
-                await updateNodePosition(d.id, d.x, d.y, d.instance);
-
-                updateNodePositionAndLinks(d);
-            })
-        );
-    }
-
-    // Update circles
-    const circle = nodeLayer.selectAll("circle").data(nodesWithoutImages, d => d.id);
-
-    circle.exit().remove();
-
-    circle.enter()
-        .append("circle")
-        .attr("r", 10)  // Adjust radius as needed
-        .merge(circle)
-        .attr("cx", d => d.x_positions[d.instance])
-        .attr("cy", d => d.y_positions[d.instance])
-        .attr("fill", d => connectionsToColor(d.connections) || "red")
-        .on("mousedown", async function (event, d) {
-            selectNode(d);
-        })
-        .call(setupDragBehavior)
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this node?");
-            if (confirmed) {
-                await deleteNode(d.id);
-                
-                // Remove the node and its related links from the data
-                nodes = nodes.filter(node => node.id !== d.id);
-                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
-                
-                // Redraw the grid and nodes/links
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("dblclick", async function (event, d) {
-            const newX = d.x + 20; // New node's X coordinate
-            const newY = d.y + 20; // New node's Y coordinate
-            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
-            
-            let label = userInput.label;
-            let url = "";
-            let imageUrl = ""
-
-            if (isValidLink(label)) {
-                label = await fetchPageTitle(label);
-                url = label;
-                // imageUrl = await getFavicon(label);
-            }
-
-            if (isYouTubeLink(userInput.label)) {
-                imageUrl = getYouTubeThumbnail(userInput.label);
-                url = userInput.label;
-            }
-            
-            if (label) {
-                if (!userInput.exists) {
-                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
-                } else {
-                    await connectToNode(d.id, nodeTo=label);
-                }
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Update images
-    const image = nodeLayer.selectAll("image").data(nodesWithImages, d => d.id);
-
-    image.exit().remove();
-
-    image.enter()
-        .append("image")
-        .attr("width", 40)  // Adjust width as needed
-        .attr("height", 40) // Adjust height as needed
-        .attr("x", d => d.x_positions[d.instance] - 20)  // Adjust x position as needed
-        .attr("y", d => d.y_positions[d.instance] - 20)  // Adjust y position as needed
-        .attr("xlink:href", d => d.imageUrl)
-        .merge(image)
-        .call(setupDragBehavior)
-        .on("contextmenu", async function (event, d) {
-            event.preventDefault();
-            const confirmed = confirm("Do you want to delete this node?");
-            if (confirmed) {
-                await deleteNode(d.id);
-                
-                // Remove the node and its related links from the data
-                nodes = nodes.filter(node => node.id !== d.id);
-                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
-                
-                // Redraw the grid and nodes/links
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
-            }
-        })
-        .on("dblclick", async function (event, d) {
-            const newX = d.x + 20; // New node's X coordinate
-            const newY = d.y + 20; // New node's Y coordinate
-            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
-            
-            let label = userInput.label;
-            let url = "";
-            let imageUrl = ""
-
-            if (isValidLink(label)) {
-                label = await fetchPageTitle(label);
-                url = label;
-                // imageUrl = await getFavicon(label);
-            }
-
-            if (isYouTubeLink(userInput.label)) {
-                imageUrl = getYouTubeThumbnail(userInput.label);
-                url = userInput.label;
-            }
-            
-            if (label) {
-                if (!userInput.exists) {
-                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
-                } else {
-                    await connectToNode(d.id, nodeTo=label);
-                }
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-
-    // Update labels
-    const labels = nodeLayer.selectAll("text").data(nodes, d => d.id);
-
-    labels.exit().remove();
-
-    labels.enter()
-        .append("text")
-        .merge(labels)
-        .attr("x", d => d.imageUrl ? d.x_positions[d.instance] + 30 : d.x_positions[d.instance] + 10)  // Adjust x position based on node type
-        .attr("y", d => d.imageUrl ? d.y_positions[d.instance] + 10 : d.y_positions[d.instance])
-        .text(d => d.label)
-        .attr("font-size", "12px")
-        .attr("fill", "#eee");
-}
-*/
 
 // V4
 function updateLinksAndNodes() {
@@ -2478,7 +1294,7 @@ function updateLinksAndNodes() {
             .attr("y", t => t.imageUrl ? t.y_positions[t.instance] + 10 : t.y_positions[t.instance]);
 
         // Update circle positions
-        nodeLayer.selectAll("circle")
+        nodeLayer.selectAll("rect")
             .attr("cx", n => n.x_positions[n.instance])
             .attr("cy", n => n.y_positions[n.instance]);
 
@@ -2538,21 +1354,110 @@ function updateLinksAndNodes() {
             })
         );
     }
-
+/*
     // Update circles
-    const circle = nodeLayer.selectAll("circle").data(nodesWithoutImages, d => d.id);
+    rect = nodeLayer.selectAll("rect").data(nodesWithoutImages, d => d.id);
 
-    circle.exit().remove();
+    rect.exit().remove();
 
-    circle.enter()
-        .append("circle")
-        .attr("r", 10)  // Adjust radius as needed
-        .merge(circle)
+    rect.enter()
+    .append("rect")
+    .attr("width", d => Number(d.widths[d.instance]) || 20)  // Ensure width is a number, defaults to 20
+    .attr("height", d => Number(d.heights[d.instance]) || 20) // Ensure height is a number, defaults to 20
+    .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10)) // Centering the rectangle
+    .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10)) // Centering the rectangle
+    .attr("rx", d => {
+        const width = Number(d.widths[d.instance]) || 20;
+        return Math.max(0, (20 - (width - 20) * 0.1)); // Decrease corner radius as width increases
+    })
+    .attr("ry", d => {
+        const height = Number(d.heights[d.instance]) || 20;
+        return Math.max(0, (20 - (height - 20) * 0.1)); // Decrease corner radius as height increases
+    })
+    .merge(rect)
+    .attr("label", d => d.label)
+    .attr("instance", d => d.instance)
+    .attr("cx", d => d.x_positions[d.instance])
+    .attr("cy", d => d.y_positions[d.instance])
+    .attr("fill", d => {
+        if (d.type === "grouping_box") {
+            return "rgba(128, 0, 128, 0.1)"; // Partially transparent purple
+        } else {
+            return connectionsToColor(d.connections) || "red";
+        }
+    })
+    .attr("stroke", d => {
+        if (d.type === "grouping_box") {
+            return "purple";
+        } else {
+            return "none"; // Default stroke if not a grouping box
+        }
+    })
+    .attr("stroke-dasharray", d => {
+        if (d.type === "grouping_box") {
+            return "4 2"; // Dashed line
+        } else {
+            return "none"; // Default stroke-dasharray if not a grouping box
+        }
+    })
+    .on("mousedown", async function (event, d) {
+        selectNode(event, d);
+    })
+    .call(setupDragBehavior)
+    .on("contextmenu", async function (event, d) {
+        event.preventDefault();
+        const confirmed = confirm("Do you want to delete this node?");
+        if (confirmed) {
+            await deleteNode(d.id, d.instance);
+            
+            // Remove the node and its related links from the data
+            nodes = nodes.filter(node => node.id !== d.id);
+            links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
+            
+            // Redraw the grid and nodes/links
+            drawGrid(cur_trans);
+            drawNodesAndLinks(cur_trans);
+        }
+    })
+    .on("dblclick", async (event, d) => {
+        // Handle double-click event
+    });
+
+// Remove old rects before appending new ones
+rect.exit().remove();
+*/
+    // Separate the nodes based on their type
+const groupingNodes = nodesWithoutImages.filter(d => d.type === 'grouping_box');
+const regularNodes = nodesWithoutImages.filter(d => d.type !== 'grouping_box');
+
+// Function to update rects
+function updateRects(layer, data, fill, stroke, strokeDasharray) {
+    let rect = layer.selectAll("rect").data(data, d => d.id);
+
+    rect.exit().remove();
+
+    rect.enter()
+        .append("rect")
+        .attr("width", d => Number(d.widths[d.instance]) || 20)  // Ensure width is a number, defaults to 20
+        .attr("height", d => Number(d.heights[d.instance]) || 20) // Ensure height is a number, defaults to 20
+        .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10)) // Centering the rectangle
+        .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10)) // Centering the rectangle
+        .attr("rx", d => {
+            const width = Number(d.widths[d.instance]) || 20;
+            return Math.max(0, (20 - (width - 20) * 0.1)); // Decrease corner radius as width increases
+        })
+        .attr("ry", d => {
+            const height = Number(d.heights[d.instance]) || 20;
+            return Math.max(0, (20 - (height - 20) * 0.1)); // Decrease corner radius as height increases
+        })
+        .merge(rect)
         .attr("label", d => d.label)
         .attr("instance", d => d.instance)
         .attr("cx", d => d.x_positions[d.instance])
         .attr("cy", d => d.y_positions[d.instance])
-        .attr("fill", d => connectionsToColor(d.connections) || "red")
+        .attr("fill", fill)
+        .attr("stroke", stroke)
+        .attr("stroke-dasharray", strokeDasharray)
         .on("mousedown", async function (event, d) {
             selectNode(event, d);
         })
@@ -2572,62 +1477,19 @@ function updateLinksAndNodes() {
                 drawNodesAndLinks(cur_trans);
             }
         })
-      .on("dblclick", async (event, d) => {
-
+        .on("dblclick", async (event, d) => {
+            // Handle double-click event
         });
+}
+
+// Update rects for groupingLayer
+updateRects(groupingLayer, groupingNodes, "rgba(128, 0, 128, 0.1)", "purple", "4 2");
+
+// Update rects for nodeLayer
+updateRects(nodeLayer, regularNodes, d => connectionsToColor(d.connections) || "red", "none", "none");
 
     
-
-    
-
-
-
-    
-
-    
-    
-
-        /*.on("dblclick", async function (event, d) {
-	    console.log(d)
-            const newX = d.x_positions[d.instance] + 20; // New node's X coordinate
-            const newY = d.y_positions[d.instance] + 20; // New node's Y coordinate
-	    console.log("WOW")
-	    console.log(newX, newY)
-            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
-            console.log("wtf", userInput)
-            let label = userInput.label;
-            let url = "";
-            let imageUrl = "";
-
-            if (isValidLink(label)) {
-                label = await fetchPageTitle(label);
-                url = label;
-                // imageUrl = await getFavicon(label);
-            }
-
-            if (isYouTubeLink(userInput.label)) {
-                imageUrl = getYouTubeThumbnail(userInput.label);
-                url = userInput.label;
-            }
-
-	    console.log("HEY")
-            
-            if (label) {
-		console.log("Creating a node and link1");
-                if (!userInput.exists) {
-		    console.log("Creating a node and link2");
-                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
-                } else {
-		    console.log("Creating a node and link3");
-                    await connectToNode(d.id, nodeTo=label);
-                }
-                drawNodesAndLinks(cur_trans);
-            }
-        });
-*/
-    // Remove old circles before appending new ones
-    circle.exit().remove();
-// Define a function to get a unique identifier for each circle
+// Define a function to get a unique identifier for each rect
 function getUniqueId(d) {
     return d.label + d.instance;
 }    
@@ -2638,11 +1500,14 @@ function getUniqueId(d) {
 
     image.enter()
         .append("image")
-        .attr("width", 40)  // Adjust width as needed
-        .attr("height", 40) // Adjust height as needed
+        .attr("width",  d => d.widths[d.instance] || 40)  // Adjust width as needed
+        .attr("height",  d => d.heights[d.instance] || 40) // Adjust height as needed
         .attr("x", d => d.x_positions[d.instance] - 20)  // Adjust x position as needed
         .attr("y", d => d.y_positions[d.instance] - 20)  // Adjust y position as needed
         .attr("xlink:href", d => d.imageUrl)
+        .on("error", function () {
+            d3.select(this).attr("xlink:href", "image-load-failed.png"); // Fallback image if link is bad
+	})
         .merge(image)
         .on("mousedown", async function (event, d) {
             selectNode(event, d);
@@ -2895,8 +1760,11 @@ async function selectNode(event,d) {
 	    }
 	    
 	    setCodeEditorTitle(d.label);
-            document.getElementById("nodeX").value = d.x;
-            document.getElementById("nodeY").value = d.y;
+    document.getElementById("nodeX").value = d.x;
+    document.getElementById("nodeY").value = d.y;
+    document.getElementById("nodeWidth").value = d.width;
+    document.getElementById("nodeHeight").value = d.height;
+    document.getElementById("nodeInstance").value = d.instance;
             document.getElementById("nodeBackground").value = d.background;
             document.getElementById("nodeCode").value = d.code || "";
 
@@ -2958,137 +1826,519 @@ async function selectNode(event,d) {
                 connectionsFromList.appendChild(listItem);
             });
     
-    if (d.label.includes(".js") && event.shiftKey) {
+/*    if (d.label.includes(".js") && event.shiftKey) {
 
 	console.log("BBBBRRRU", event);
 
-async function getNodesAndRelationships(d) {
-  const session = driver.session();
 
-  try {
-    const result = await session.run(`
-      MATCH (startNode {label: "${d.label}"})
-      WITH startNode
-      MATCH p = (startNode)-[:CONNECTED_TO*]->(node)
-      WHERE node.label ENDS WITH '.js'
-      RETURN DISTINCT startNode, p
+
+	async function getNodesAndRelationships(d) {
+	    const session = driver.session();
+
+	    try {
+		// Query to get grouping box parameters from any node with type `grouping_box`
+		const groupingBoxResult = await session.run(`
+      MATCH (box {type: 'grouping_box'})
+      RETURN box.x_positions AS x_positions, box.y_positions AS y_positions, box.widths AS widths, box.heights AS heights
     `);
 
-    const nodes = new Map();
-    const relationships = new Set();
+		const { x_positions, y_positions, widths, heights } = groupingBoxResult.records[0].toObject();
 
-    result.records.forEach(record => {
-      const startNode = record.get('startNode').properties;
-      const path = record.get('p');
-      
-      if (!nodes.has(startNode.label)) {
-        nodes.set(startNode.label, startNode);
-      }
+		// Function to check if a point is within a box, considering the box is positioned by its center
+		function isInBox(x, y, xCenter, yCenter, width, height) {
+		    const xMin = xCenter - width / 2;
+		    const xMax = xCenter + width / 2;
+		    const yMin = yCenter - height / 2;
+		    const yMax = yCenter + height / 2;
+		    return x >= xMin && x <= xMax && y >= yMin && y <= yMax;
+		}
 
-      path.segments.forEach(segment => {
-        const start = segment.start.properties;
-        const end = segment.end.properties;
-        
-        if (!nodes.has(start.label)) {
-          nodes.set(start.label, start);
-        }
-        
-        if (!nodes.has(end.label)) {
-          nodes.set(end.label, end);
-        }
-
-        relationships.add(JSON.stringify({ from: start.label, to: end.label }));
-      });
-    });
-
-    return { nodes: Array.from(nodes.values()), relationships: Array.from(relationships).map(rel => JSON.parse(rel)) };
-  } finally {
-    await session.close();
-  }
-}
-
-function createFunctionCode(nodes, relationships) {
-  const functionCalls = {};
-
-  relationships.forEach(rel => {
-    const from = rel.from.replace('.js', '');
-    const to = rel.to.replace('.js', '');
-
-    if (!functionCalls[from]) {
-      functionCalls[from] = [];
-    }
-
-    functionCalls[from].push(to);
-  });
-
-  return nodes.map(node => {
-    const functionName = node.label.replace('.js', '');
-    const code = node.code || '';
-    const calls = functionCalls[functionName] || [];
-    
-    // Generate callCode based on relationships for all functions, with null check
-    const callCode = calls.map(call => `  if (output !== null) {\n    ${call}(output);\n  }`).join('\n');
-
-    // Default output value
-    const defaultOutput = `null`;
-    
-    return `function ${functionName}(input = "") {\n  let output = ${defaultOutput};\n  ${code}\n${callCode}\n}`;
-  }).join('\n\n');
-}
-
-async function executeFunctionCode(d) {
-  const { nodes, relationships } = await getNodesAndRelationships(d);
-  
-  if (nodes.length === 0 || relationships.length === 0) {
-    // No nodes or relationships found, just eval the current code
-    eval(d.code);
-  } else {
-    // Generate and eval the function code
-    const functionsCode = createFunctionCode(nodes, relationships) + `\n${d.label.replace(".js","")}();`;
-    console.log(functionsCode);
-    eval(functionsCode);
-  }
-}
-
-// Execute the function with the given 'd' object
-executeFunctionCode(d);
-
-	
-	
-	
-
-	
-
-		 // Loop through connections
-
-		/*console.log(connectionsTo);
-		connectionsTo.forEach(item => {
-		    if (item.label && item.label.includes('.js')) {
-			console.log(item);
+		// Find all grouping boxes that contain at least one instance of node `d`
+		const groupingBoxIndices = [];
+		for (let i = 0; i < x_positions.length; i++) {
+		    for (let j = 0; j < d.x_positions.length; j++) {
+			if (isInBox(d.x_positions[j], d.y_positions[j], x_positions[i], y_positions[i], widths[i], heights[i])) {
+			    groupingBoxIndices.push({boxIndex: i, instanceIndex: j});
+			}
 		    }
+		}
+
+		if (groupingBoxIndices.length === 0) {
+		    console.log(`Node d coordinates: (${d.x_positions}, ${d.y_positions})`);
+		    console.log('Grouping Boxes:');
+		    for (let i = 0; i < x_positions.length; i++) {
+			console.log(`Box ${i}: x=${x_positions[i]}, y=${y_positions[i]}, width=${widths[i]}, height=${heights[i]}`);
+		    }
+		    throw new Error("Node `d` is not within any grouping box.");
+		}
+
+		// Function to get nodes and relationships for a specific grouping box index
+		async function getNodesAndRelationshipsForBox(groupingBoxIndex, instanceIndex, instanceLabel) {
+		    const result = await session.run(`
+        MATCH (startNode {label: "${d.label}"})
+        WITH startNode
+        MATCH p = (startNode)-[:CONNECTED_TO*]->(node)
+        WHERE node.label ENDS WITH '.js'
+          AND any(pos in node.x_positions WHERE pos >= ${x_positions[groupingBoxIndex]} - ${widths[groupingBoxIndex] / 2} AND pos <= ${x_positions[groupingBoxIndex]} + ${widths[groupingBoxIndex] / 2})
+          AND any(pos in node.y_positions WHERE pos >= ${y_positions[groupingBoxIndex]} - ${heights[groupingBoxIndex] / 2} AND pos <= ${y_positions[groupingBoxIndex]} + ${heights[groupingBoxIndex] / 2})
+          AND all(n in nodes(p) WHERE 
+            any(pos in n.x_positions WHERE pos >= ${x_positions[groupingBoxIndex]} - ${widths[groupingBoxIndex] / 2} AND pos <= ${x_positions[groupingBoxIndex]} + ${widths[groupingBoxIndex] / 2})
+            AND any(pos in n.y_positions WHERE pos >= ${y_positions[groupingBoxIndex]} - ${heights[groupingBoxIndex] / 2} AND pos <= ${y_positions[groupingBoxIndex]} + ${heights[groupingBoxIndex] / 2})
+          )
+        RETURN DISTINCT startNode, p
+      `);
+
+		    const nodes = new Map();
+		    const relationships = new Set();
+
+		    result.records.forEach(record => {
+			const startNode = record.get('startNode').properties;
+			const path = record.get('p');
+
+			const instanceStartNode = { ...startNode, label: instanceLabel };
+			if (!nodes.has(instanceStartNode.label)) {
+			    nodes.set(instanceStartNode.label, instanceStartNode);
+			}
+
+			path.segments.forEach(segment => {
+			    const start = segment.start.properties;
+			    const end = segment.end.properties;
+
+			    const instanceStart = { ...start, label: `${start.label}` };
+			    const instanceEnd = { ...end, label: `${end.label}` };
+
+			    if (!nodes.has(instanceStart.label)) {
+				nodes.set(instanceStart.label, instanceStart);
+			    }
+
+			    if (!nodes.has(instanceEnd.label)) {
+				nodes.set(instanceEnd.label, instanceEnd);
+			    }
+
+			    relationships.add(JSON.stringify({ from: instanceStart.label, to: instanceEnd.label }));
+			});
+		    });
+
+		    return { nodes: Array.from(nodes.values()), relationships: Array.from(relationships).map(rel => JSON.parse(rel)) };
+		}
+
+		// Collect results for all relevant grouping boxes and instances
+		const results = [];
+		for (let i = 0; i < groupingBoxIndices.length; i++) {
+		    const {boxIndex, instanceIndex} = groupingBoxIndices[i];
+		    const instanceLabel = instanceIndex === 0 ? `${d.label}` : `${d.label.split('.js')[0]}_${instanceIndex}.js`;
+		    const result = await getNodesAndRelationshipsForBox(boxIndex, instanceIndex, instanceLabel);
+		    results.push(result);
+		}
+
+		// Merge results without combining instances
+		const mergedNodes = [];
+		const mergedRelationships = [];
+
+		results.forEach(result => {
+		    mergedNodes.push(...result.nodes);
+		    mergedRelationships.push(...result.relationships);
 		});
-*/
 
+		return { nodes: mergedNodes, relationships: mergedRelationships };
+	    } finally {
+		await session.close();
 	    }
+	}
 
-}
+	
+	
+	
+
+	
 
 
+
+
+	
+
+	function createFunctionCode(nodes, relationships) {
+	    const functionCalls = {};
+
+	    relationships.forEach(rel => {
+		const from = rel.from.replace('.js', '');
+		const to = rel.to.replace('.js', '');
+
+		if (!functionCalls[from]) {
+		    functionCalls[from] = [];
+		}
+
+		functionCalls[from].push(to);
+	    });
+
+	    return nodes.map(node => {
+		const functionName = node.label.replace('.js', '');
+		const code = node.code || '';
+		const calls = functionCalls[functionName] || [];
+		
+		// Generate callCode based on relationships for all functions, with null check
+		const callCode = calls.map(call => `  if (output !== null) {\n    ${call}(output);\n  }`).join('\n');
+
+		// Default output value
+		const defaultOutput = `null`;
+		
+		return `function ${functionName}(input = "") {\n  let output = ${defaultOutput};\n  ${code}\n${callCode}\n}`;
+	    }).join('\n\n');
+	}
+
+	async function executeFunctionCode(d) {
+	    const { nodes, relationships } = await getNodesAndRelationships(d);
+	    
+	    if (nodes.length === 0 || relationships.length === 0) {
+		// No nodes or relationships found, just eval the current code
+		eval(d.code);
+	    } else {
+		// Generate and eval the function code
+		const functionsCode = createFunctionCode(nodes, relationships) + `\n${d.label.replace(".js","")}();`;
+		console.log(functionsCode);
+		eval(functionsCode);
+	    }
+	}
+
+	// Execute the function with the given 'd' object
+	executeFunctionCode(d);
+
+	
+    }*/
+
+    console.log("EXECUTING CODE")
+
+
+
+    
+
+    if (d.label.includes(".js") && event.shiftKey) {
+    console.log("BBBBRRRU", event);
 /*
-        const zoom = d3.zoom()
-            .scaleExtent([0.1, 4])
-            .on("zoom", (event) => {
-                const transform = event.transform;
-                g.attr("transform", transform);
-                drawGrid(transform);
-            })
-            .on("end", (event) => {
-                const transform = event.transform;
-                drawNodesAndLinks(transform);
+    async function getNodesAndRelationships(d) {
+        const session = driver.session();
+
+        try {
+            // Query to get grouping box parameters from any node with type `grouping_box`
+            const groupingBoxResult = await session.run(`
+                MATCH (box {type: 'grouping_box'})
+                RETURN box.x_positions AS x_positions, box.y_positions AS y_positions, box.widths AS widths, box.heights AS heights
+            `);
+
+            const { x_positions, y_positions, widths, heights } = groupingBoxResult.records[0].toObject();
+
+            // Function to check if a point is within a box, considering the box is positioned by its center
+            function isInBox(x, y, xCenter, yCenter, width, height) {
+                const xMin = xCenter - width / 2;
+                const xMax = xCenter + width / 2;
+                const yMin = yCenter - height / 2;
+                const yMax = yCenter + height / 2;
+                return x >= xMin && x <= xMax && y >= yMin && y <= yMax;
+            }
+
+	    
+            // Find all grouping boxes that contain at least one instance of node `d`
+            const groupingBoxIndices = [];
+            for (let i = 0; i < x_positions.length; i++) {
+                for (let j = 0; j < d.x_positions.length; j++) {
+                    if (isInBox(d.x_positions[j], d.y_positions[j], x_positions[i], y_positions[i], widths[i], heights[i])) {
+                        groupingBoxIndices.push({boxIndex: i, instanceIndex: j});
+                    }
+                }
+            }
+
+            if (groupingBoxIndices.length === 0) {
+                console.log(`Node d coordinates: (${d.x_positions}, ${d.y_positions})`);
+                console.log('Grouping Boxes:');
+                for (let i = 0; i < x_positions.length; i++) {
+                    console.log(`Box ${i}: x=${x_positions[i]}, y=${y_positions[i]}, width=${widths[i]}, height=${heights[i]}`);
+                }
+                throw new Error("Node `d` is not within any grouping box.");
+            }
+
+            // Function to get nodes and relationships for a specific grouping box index
+            async function getNodesAndRelationshipsForBox(groupingBoxIndex, instanceIndex, instanceLabel) {
+                const result = await session.run(`
+                    MATCH (startNode {label: "${d.label}"})
+                    WITH startNode
+                    MATCH p = (startNode)-[:CONNECTED_TO*]->(node)
+                    WHERE node.label ENDS WITH '.js'
+                      AND any(pos in node.x_positions WHERE pos >= ${x_positions[groupingBoxIndex]} - ${widths[groupingBoxIndex] / 2} AND pos <= ${x_positions[groupingBoxIndex]} + ${widths[groupingBoxIndex] / 2})
+                      AND any(pos in node.y_positions WHERE pos >= ${y_positions[groupingBoxIndex]} - ${heights[groupingBoxIndex] / 2} AND pos <= ${y_positions[groupingBoxIndex]} + ${heights[groupingBoxIndex] / 2})
+                      AND all(n in nodes(p) WHERE 
+                        any(pos in n.x_positions WHERE pos >= ${x_positions[groupingBoxIndex]} - ${widths[groupingBoxIndex] / 2} AND pos <= ${x_positions[groupingBoxIndex]} + ${widths[groupingBoxIndex] / 2})
+                        AND any(pos in n.y_positions WHERE pos >= ${y_positions[groupingBoxIndex]} - ${heights[groupingBoxIndex] / 2} AND pos <= ${y_positions[groupingBoxIndex]} + ${heights[groupingBoxIndex] / 2})
+                      )
+                    RETURN DISTINCT startNode, p
+                `);
+
+                const nodes = new Map();
+                const relationships = new Set();
+
+                result.records.forEach(record => {
+                    const startNode = record.get('startNode').properties;
+                    const path = record.get('p');
+
+                    const instanceStartNode = { ...startNode, label: instanceLabel };
+                    if (!nodes.has(instanceStartNode.label)) {
+                        nodes.set(instanceStartNode.label, instanceStartNode);
+                    }
+
+                    path.segments.forEach(segment => {
+                        const start = segment.start.properties;
+                        const end = segment.end.properties;
+
+                        const instanceStart = { ...start, label: `${start.label}` };
+                        const instanceEnd = { ...end, label: `${end.label}` };
+
+                        if (!nodes.has(instanceStart.label)) {
+                            nodes.set(instanceStart.label, instanceStart);
+                        }
+
+                        if (!nodes.has(instanceEnd.label)) {
+                            nodes.set(instanceEnd.label, instanceEnd);
+                        }
+
+                        relationships.add(JSON.stringify({ from: instanceStart.label, to: instanceEnd.label }));
+                    });
+                });
+
+                return { nodes: Array.from(nodes.values()), relationships: Array.from(relationships).map(rel => JSON.parse(rel)) };
+            }
+
+            // Collect results for all relevant grouping boxes and instances
+            const results = [];
+            for (let i = 0; i < groupingBoxIndices.length; i++) {
+                const {boxIndex, instanceIndex} = groupingBoxIndices[i];
+                const instanceLabel = instanceIndex === 0 ? `${d.label}` : `${d.label.split('.js')[0]}_${instanceIndex}.js`;
+                const result = await getNodesAndRelationshipsForBox(boxIndex, instanceIndex, instanceLabel);
+                results.push(result);
+            }
+
+            // Merge results without combining instances
+            const mergedNodes = [];
+            const mergedRelationships = [];
+
+            results.forEach(result => {
+                mergedNodes.push(...result.nodes);
+                mergedRelationships.push(...result.relationships);
             });
 
-            svg.call(zoom);
+            return { nodes: mergedNodes, relationships: mergedRelationships };
+        } finally {
+            await session.close();
+        }
+    }
 */
+
+
+	async function getNodesAndRelationships(d) {
+    const session = driver.session();
+
+    try {
+        // Query to get all grouping box nodes
+        const groupingBoxResult = await session.run(`
+            MATCH (box {type: 'grouping_box'})
+            RETURN box.x_positions AS x_positions, box.y_positions AS y_positions, box.widths AS widths, box.heights AS heights
+        `);
+
+        if (groupingBoxResult.records.length === 0) {
+            throw new Error("No grouping boxes found.");
+        }
+
+        const boxes = groupingBoxResult.records.map(record => record.toObject());
+
+        // Function to check if a point is within a box, considering the box is positioned by its center
+        function isInBox(x, y, xCenter, yCenter, width, height) {
+             const xMin = Number(xCenter) - Number(width) / 2;
+            const xMax = Number(xCenter) + Number(width) / 2;
+            const yMin = Number(yCenter) - Number(height) / 2;
+            const yMax = Number(yCenter) + Number(height) / 2;
+	    
+
+            console.log(`Checking point (${x}, ${y}) within box centered at (${xCenter}, ${yCenter}) with width ${width} and height ${height}`);
+            console.log(`Box boundaries: xMin=${xMin}, xMax=${xMax}, yMin=${yMin}, yMax=${yMax}`);
+
+            const withinX = x >= xMin && x <= xMax;
+            const withinY = y >= yMin && y <= yMax;
+
+            console.log(`withinX: ${withinX}, withinY: ${withinY}`);
+
+            return withinX && withinY;
+        }
+
+        // Find all grouping boxes that contain at least one instance of node `d`
+        const groupingBoxIndices = [];
+        boxes.forEach((box, boxIndex) => {
+            for (let j = 0; j < d.x_positions.length; j++) {
+                console.log(`Checking if d (${d.x_positions[j]}, ${d.y_positions[j]}) is in box ${boxIndex}: (${box.x_positions}, ${box.y_positions}, ${box.widths}, ${box.heights})`);
+                if (isInBox(d.x_positions[j], d.y_positions[j], box.x_positions, box.y_positions, box.widths, box.heights)) {
+                    console.log(`d is in box ${boxIndex}`);
+                    groupingBoxIndices.push({boxIndex, instanceIndex: j});
+                }
+            }
+        });
+
+        if (groupingBoxIndices.length === 0) {
+            console.log(`Node d coordinates: (${d.x_positions}, ${d.y_positions})`);
+            console.log('Grouping Boxes:');
+            boxes.forEach((box, i) => {
+                console.log(`Box ${i}: x=${box.x_positions}, y=${box.y_positions}, width=${box.widths}, height=${box.heights}`);
+            });
+            throw new Error("Node `d` is not within any grouping box.");
+        }
+
+        // Function to get nodes and relationships for a specific grouping box index
+        async function getNodesAndRelationshipsForBox(box, instanceIndex, instanceLabel) {
+            const result = await session.run(`
+                MATCH (startNode {label: "${d.label}"})
+                WITH startNode
+                MATCH p = (startNode)-[:CONNECTED_TO*]->(node)
+                WHERE node.label ENDS WITH '.js'
+                  AND any(pos in node.x_positions WHERE pos >= ${box.x_positions} - ${box.widths / 2} AND pos <= ${box.x_positions} + ${box.widths / 2})
+                  AND any(pos in node.y_positions WHERE pos >= ${box.y_positions} - ${box.heights / 2} AND pos <= ${box.y_positions} + ${box.heights / 2})
+                  AND all(n in nodes(p) WHERE 
+                    any(pos in n.x_positions WHERE pos >= ${box.x_positions} - ${box.widths / 2} AND pos <= ${box.x_positions} + ${box.widths / 2})
+                    AND any(pos in n.y_positions WHERE pos >= ${box.y_positions} - ${box.heights / 2} AND pos <= ${box.y_positions} + ${box.heights / 2})
+                  )
+                RETURN DISTINCT startNode, p
+            `);
+
+            const nodes = new Map();
+            const relationships = new Set();
+
+            result.records.forEach(record => {
+                const startNode = record.get('startNode').properties;
+                const path = record.get('p');
+
+                const instanceStartNode = { ...startNode, label: instanceLabel };
+                if (!nodes.has(instanceStartNode.label)) {
+                    nodes.set(instanceStartNode.label, instanceStartNode);
+                }
+
+                path.segments.forEach(segment => {
+                    const start = segment.start.properties;
+                    const end = segment.end.properties;
+
+                    const instanceStart = { ...start, label: `${start.label}` };
+                    const instanceEnd = { ...end, label: `${end.label}` };
+
+                    if (!nodes.has(instanceStart.label)) {
+                        nodes.set(instanceStart.label, instanceStart);
+                    }
+
+                    if (!nodes.has(instanceEnd.label)) {
+                        nodes.set(instanceEnd.label, instanceEnd);
+                    }
+
+                    relationships.add(JSON.stringify({ from: instanceStart.label, to: instanceEnd.label }));
+                });
+            });
+
+            return { nodes: Array.from(nodes.values()), relationships: Array.from(relationships).map(rel => JSON.parse(rel)) };
+        }
+
+        // Collect results for all relevant grouping boxes and instances
+        const results = [];
+        for (let i = 0; i < groupingBoxIndices.length; i++) {
+            const {boxIndex, instanceIndex} = groupingBoxIndices[i];
+            const instanceLabel = instanceIndex === 0 ? `${d.label}` : `${d.label.split('.js')[0]}_${instanceIndex}.js`;
+            const result = await getNodesAndRelationshipsForBox(boxes[boxIndex], instanceIndex, instanceLabel);
+            results.push(result);
+        }
+
+        // Merge results without combining instances
+        const mergedNodes = [];
+        const mergedRelationships = [];
+
+        results.forEach(result => {
+            mergedNodes.push(...result.nodes);
+            mergedRelationships.push(...result.relationships);
+        });
+
+        return { nodes: mergedNodes, relationships: mergedRelationships };
+    } finally {
+        await session.close();
+    }
+}
+
+	
+
+
+	
+
+	
+
+    function createFunctionCode(nodes, relationships) {
+        const functionCalls = {};
+
+        relationships.forEach(rel => {
+            const from = rel.from.replace('.js', '');
+            const to = rel.to.replace('.js', '');
+
+            if (!functionCalls[from]) {
+                functionCalls[from] = [];
+            }
+
+            functionCalls[from].push(to);
+        });
+
+        const functionDefinitions = nodes.map(node => {
+            const functionName = node.label.replace('.js', '');
+            const code = node.code || '';
+            return `async function ${functionName}(input) {\n${code}\n}`;
+        }).join('\n\n');
+
+	const functionCallsCode = [];
+functionCallsCode.push(`(async function main() {`);
+let isFirstFunction = true;
+
+Object.keys(functionCalls).forEach((functionName) => {
+    if (isFirstFunction) {
+        functionCallsCode.push(`const var_${functionName} = await ${functionName}();`);
+        functionCalls[functionName].forEach((call) => {
+            functionCallsCode.push(`const var_${call} = await ${call}(var_${functionName});`);
+        });
+        isFirstFunction = false;
+    } else {
+        functionCalls[functionName].forEach((call) => {
+            functionCallsCode.push(`const var_${call} = await ${call}(var_${functionName});`);
+        });
+    }
+});
+
+functionCallsCode.push(`})();`);
+
+	
+	
+
+        return `${functionDefinitions}\n\n${functionCallsCode.join('\n')}`;
+    }
+
+    async function executeFunctionCode(d) {
+        const { nodes, relationships } = await getNodesAndRelationships(d);
+	
+        
+        if (nodes.length === 0 || relationships.length === 0) {
+            // No nodes or relationships found, just eval the current code
+	    console.log("1",d.code)
+            eval(d.code);
+        } else {
+            // Generate and eval the function code
+            const functionsCode = createFunctionCode(nodes, relationships);
+            console.log(functionsCode);
+            eval(functionsCode);
+        }
+    }
+
+    // Execute the function with the given 'd' object
+    executeFunctionCode(d);
+}
+        
+    
+
+}
+
 
 // Function to save the transform to local storage
 function saveTransformToLocalStorage(transform) {
@@ -3141,7 +2391,7 @@ async function handleDoubleClick(event) {
 	createOrphanNode(x,y);
     }
     
-    if (event.target.localName === "circle") {
+    if (event.target.localName === "rect") {
 	
 	//console.log("BROH", event.target.__data__.label, g.node())
 
@@ -3198,12 +2448,17 @@ svg.call(zoom).on("dblclick.zoom", null);
 		const imageUrl = document.getElementById("nodeImageUrl").value;
                 const x = parseFloat(document.getElementById("nodeX").value);
                 const y = parseFloat(document.getElementById("nodeY").value);
+		const width = parseFloat(document.getElementById("nodeWidth").value);
+		const height = parseFloat(document.getElementById("nodeHeight").value);
+		const instance = parseFloat(document.getElementById("nodeInstance").value);
                 const background = document.getElementById("nodeBackground").value;
                 const code = document.getElementById("nodeCode").value;
-                await updateNodeProperties(id, label, url, imageUrl, x, y, background, code);
+		
+		console.log("UPDATING NODE", document.getElementById("nodeId"));
+                await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, background, code);
 
                 // Update the node in the visualization
-                const node = nodeLayer.selectAll("circle").filter(d => d.id === id)
+                const node = nodeLayer.selectAll("rect").filter(d => d.id === id)
                     .attr("cx", x)
                     .attr("cy", y)
                     .attr("fill", background);
@@ -3301,6 +2556,8 @@ svg.call(zoom).on("dblclick.zoom", null);
                         label: node.label,
                         x: node.x_positions[index],
                         y: node.y_positions[index],
+			width: node.widths[index],
+			height: node.heights[index],
                         instance: index
                     }));
                 });
@@ -3371,24 +2628,6 @@ svg.call(zoom).on("dblclick.zoom", null);
             }
         }
 
-/*        // Function to fetch node details by ID
-        async function fetchNodeById(id) {
-            //console.log('Fetching node by ID:', id); // Debug log
-            const session = driver.session();
-            try {
-                const result = await session.run(
-                    `MATCH (n) WHERE ID(n) = $id RETURN n`,
-                    { id: parseInt(id, 10) }
-                );
-                return result.records[0]?.get('n').properties || null;
-            } catch (error) {
-                console.error(error);
-            } finally {
-                await session.close();
-            }
-            return null;
-        }
-*/
         // Function to handle spotlight zoom
         window.spotlightZoom = async function() {
             //console.log('Invoking spotlight zoom'); // Debug log
