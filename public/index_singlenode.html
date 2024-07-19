@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Grid with D3.js and Neo4j</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://unpkg.com/neo4j-driver"></script>
+    <style>
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: 'Arial', sans-serif;
+}
+
+svg {
+    width: 100%;
+    height: 70%;
+    background-color: #1e1e1e;
+    cursor: grab;
+    border-bottom: 1px solid #333;
+}
+
+#inspector {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 250px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    padding: 15px;
+    display: none;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+#inspector h3 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #f0f0f0;
+}
+
+#inspector label {
+    display: block;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+#inspector input {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: #333;
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 4px;
+}
+
+#connections {
+    margin-top: 10px;
+}
+
+   #connections h4 {
+            font-size: 16px;
+            color: #f0f0f0;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #connections h4 button {
+            background: none;
+            border: none;
+            color: #f0f0f0;
+            font-size: 18px;
+            cursor: pointer;
+}
+
+
+#connections ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#connections ul li {
+    font-size: 14px;
+    color: #ccc;
+    cursor: pointer;
+    padding: 10px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+#connections ul li:hover {
+    color: #fff;
+    background-color: #333;
+    border-radius: 4px;
+}
+
+
+  .flex-container {
+            display: flex;
+            width: 100%;
+            height: 30%;
+        }
+
+        #code-editor, #video-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+            border-top: 1px solid #333;
+        }
+
+#video-container {
+    display: none;
+    }
+
+        #code-editor .title-bar, #video-container .title-bar {
+            background: #333;
+            padding: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #code-editor .title-bar button, #video-container .title-bar button {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+        }
+
+        #code-editor textarea {
+            width: 100%;
+            height: 100%;
+            background: #121212;
+            color: #e0e0e0;
+            border: none;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            flex-grow: 1;
+        }
+
+        #video-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            flex-grow: 1;
+        }
+
+        .resizer {
+            width: 5px;
+            cursor: ew-resize;
+            background-color: #333;
+        }
+
+
+.grid-line {
+    stroke: #333;
+}
+
+ #spotlightSearch {
+            display: none;
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e1e1e;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            width: 400px;
+            padding: 20px;
+            z-index: 1000;
+        }
+        #searchTitle {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: #2e2e2e;
+            color: #ffffff;
+            border: 1px solid #444444;
+        }
+        #results {
+            margin-top: 10px;
+        }
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #444444;
+            cursor: pointer;
+            background-color: #2e2e2e;
+            color: #ffffff;
+        }
+        .result-item:hover, .result-item.selected {
+            background-color: #444444;
+        }
+
+
+
+    </style>
+</head>
+<body>
+    <svg>
+    <defs>
+        <marker id="arrowhead" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,-5L10,0L0,5" fill="#999" />
+        </marker>
+    </defs>
+    </svg>
+    <div id="inspector">
+        <h3>Node Inspector</h3>
+        <input type="hidden" id="nodeId">
+        <label>
+            Label:
+            <input type="text" id="nodeLabel">
+    </label>
+    <label>
+            Link:
+            <input type="text" id="nodeUrl">
+    </label>
+        <label>
+    Image:
+            <input type="text" id="nodeImageUrl">
+        </label> 
+
+        <label>
+            X:
+            <input type="number" id="nodeX">
+        </label>
+        <label>
+            Y:
+            <input type="number" id="nodeY">
+        </label>
+        <label>
+            Background:
+            <input type="text" id="nodeBackground">
+        </label>
+        <div id="connections">
+          <h4>
+	    Connections To
+            <button id="linkConnectionsToButton">🔗</button>
+	  </h4>
+            <ul id="connectionsToList"></ul>
+            <h4>
+                Connections From
+                <button id="linkConnectionsFromButton">🔗</button>
+	    </h4>
+            <ul id="connectionsFromList"></ul>
+        </div>
+    </div>
+
+ 
+    <div class="flex-container">
+        <div id="code-editor">
+            <div class="title-bar" id="codeEditorTitleBar">
+                <span>Code Editor</span>
+                <button onclick="toggleEditor()">_</button>
+            </div>
+            <textarea id="nodeCode"></textarea>
+        </div>
+        <div class="resizer" onmousedown="initResize(event)"></div>
+        <div id="video-container">
+            <div class="title-bar" id="videoTitleBar">
+                <span>YouTube Video</span>
+                <button onclick="toggleVideo()">_</button>
+            </div>
+            <iframe id="youtubeVideo" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <div id="spotlightSearch">
+        <div id="searchTitle"></div>
+        <input type="text" id="searchInput" placeholder="Search...">
+        <div id="results"></div>
+    </div>
+    
+    
+    <script>
+        function toggleEditor() {
+            const editor = document.getElementById('code-editor');
+            if (editor.style.display === 'none' || editor.style.display === '') {
+                editor.style.display = 'flex';
+            } else {
+                editor.style.display = 'none';
+            }
+        }
+
+        function toggleVideo() {
+            const video = document.getElementById('video-container');
+            if (video.style.display === 'none' || video.style.display === '') {
+                video.style.display = 'flex';
+            } else {
+                video.style.display = 'none';
+            }
+        }
+
+        let startX, startWidth, startFlexGrow;
+
+        function initResize(e) {
+            startX = e.clientX;
+            const videoContainer = document.getElementById('video-container');
+            startWidth = videoContainer.offsetWidth;
+            startFlexGrow = parseFloat(window.getComputedStyle(videoContainer).flexGrow);
+            document.documentElement.addEventListener('mousemove', doResize, false);
+            document.documentElement.addEventListener('mouseup', stopResize, false);
+        }
+
+        function doResize(e) {
+            const videoContainer = document.getElementById('video-container');
+            const codeEditor = document.getElementById('code-editor');
+            const deltaX = e.clientX - startX;
+
+            const newFlexGrowVideo = startFlexGrow + deltaX / startWidth;
+            const newFlexGrowEditor = 2 - newFlexGrowVideo;
+
+            videoContainer.style.flexGrow = newFlexGrowVideo;
+            codeEditor.style.flexGrow = newFlexGrowEditor;
+        }
+
+        function stopResize(e) {
+            document.documentElement.removeEventListener('mousemove', doResize, false);
+            document.documentElement.removeEventListener('mouseup', stopResize, false);
+        }
+
+
+        function setCodeEditorTitle(title) {
+            document.getElementById('codeEditorTitleBar').textContent = title;
+        }
+
+        function setVideoTitle(title) {
+            document.getElementById('videoTitleBar').textContent = title;
+        }
+
+        function setVideoUrl(url) {
+            const videoId = getYouTubeVideoId(url);
+            if (videoId) {
+                const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                document.getElementById('youtubeVideo').src = embedUrl;
+            } else {
+                alert('Invalid YouTube URL');
+            }
+	    const video = document.getElementById('video-container');
+            video.style.display = 'flex';
+
+        }
+
+function getYouTubeThumbnail(url) {
+    const videoId = getYouTubeVideoId(url);
+    if (videoId) {
+	return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    }
+    return null;
+}
+
+        function getYouTubeVideoId(url) {
+            const urlObj = new URL(url);
+            if (urlObj.hostname === 'www.youtube.com' || urlObj.hostname === 'youtube.com') {
+                return urlObj.searchParams.get('v');
+            } else if (urlObj.hostname === 'youtu.be') {
+                return urlObj.pathname.substring(1);
+            }
+            return null;
+        }
+
+</script>
+
+
+
+
+
+    <script>
+        const svg = d3.select("svg");
+        const g = svg.append("g");
+
+        const gridLayer = g.append("g").attr("class", "grid");
+const linkLayer = g.append("g").attr("class", "links");
+
+const nodeLayer = g.append("g").attr("class", "nodes");
+
+        const gridSize = 50;
+
+        let nodes = []; // Declare nodes as a global variable
+        let links = []; // Declare links as a global variable
+
+        // Initialize Neo4j driver
+        const driver = neo4j.driver(
+            'bolt://localhost:7687', // Replace with your Neo4j instance address
+            neo4j.auth.basic('neo4j', 'password') // Replace with your Neo4j username and password
+        );
+
+async function fetchNodesAndLinks(x0, x1, y0, y1) {
+    const session = driver.session();
+    const result = await session.run(
+        `MATCH (n)
+         WHERE any(x IN n.x_positions WHERE x >= $x0 AND x <= $x1)
+           AND any(y IN n.y_positions WHERE y >= $y0 AND y <= $y1)
+         OPTIONAL MATCH (n)-[r]->(m)
+         WHERE any(x IN m.x_positions WHERE x >= $x0 AND x <= $x1)
+           AND any(y IN m.y_positions WHERE y >= $y0 AND y <= $y1)
+         RETURN n, r, m,
+                size((n)--()) AS n_connections,
+                size((m)--()) AS m_connections`,
+        { x0, x1, y0, y1 }
+    );
+    session.close();
+    nodes = []; // Reset nodes array
+    links = []; // Reset links array
+
+    const nodesMap = new Map(); // Use a map to avoid duplicates
+
+    result.records.forEach(record => {
+        const nodeN = record.get('n').properties;
+        nodeN.x_positions = nodeN.x_positions.map(x => Number(x)); // Ensure x_positions are numbers
+        nodeN.y_positions = nodeN.y_positions.map(y => Number(y)); // Ensure y_positions are numbers
+        nodeN.connections = record.get('n_connections'); // Add connections property
+
+        // Add or update nodeN in the map
+        nodesMap.set(nodeN.id, nodeN);
+
+        const nodeM = record.get('m') ? record.get('m').properties : null;
+        if (nodeM) {
+            nodeM.x_positions = nodeM.x_positions.map(x => Number(x)); // Ensure x_positions are numbers
+            nodeM.y_positions = nodeM.y_positions.map(y => Number(y)); // Ensure y_positions are numbers
+            nodeM.connections = record.get('m_connections'); // Add connections property
+
+            // Add or update nodeM in the map
+            nodesMap.set(nodeM.id, nodeM);
+        }
+
+        const relationship = record.get('r');
+        if (relationship) {
+            const source = nodeN.id;
+            const target = nodeM.id;
+            const type = relationship.type; // Get the relationship type
+            links.push({
+                source,
+                target,
+                type
+            });
+        }
+    });
+
+    // Convert map values to array to remove duplicates
+    nodes = Array.from(nodesMap.values());
+
+    return { nodes, links };
+}
+
+
+
+	/*
+async function fetchNodesAndLinks(x0, x1, y0, y1) {
+    const session = driver.session();
+    const result = await session.run(
+        `MATCH (n)
+         WHERE n.x >= $x0 AND n.x <= $x1
+           AND n.y >= $y0 AND n.y <= $y1
+         OPTIONAL MATCH (n)-[r]->(m)
+         WHERE m.x >= $x0 AND m.x <= $x1
+           AND m.y >= $y0 AND m.y <= $y1
+         RETURN n, r, m,
+                size((n)--()) AS n_connections,
+                size((m)--()) AS m_connections`,
+        { x0, x1, y0, y1 }
+    );
+    session.close();
+    nodes = []; // Reset nodes array
+    links = []; // Reset links array
+
+    result.records.forEach(record => {
+        const nodeN = record.get('n').properties;
+        nodeN.x = Number(nodeN.x); // Ensure x is a number
+        nodeN.y = Number(nodeN.y); // Ensure y is a number
+        nodeN.connections = record.get('n_connections'); // Add connections property
+        nodes.push(nodeN);
+
+        const nodeM = record.get('m') ? record.get('m').properties : null;
+        if (nodeM) {
+            nodeM.x = Number(nodeM.x); // Ensure x is a number
+            nodeM.y = Number(nodeM.y); // Ensure y is a number
+            nodeM.connections = record.get('m_connections'); // Add connections property
+            nodes.push(nodeM);
+        }
+
+        const relationship = record.get('r');
+        if (relationship) {
+            const source = nodeN.id;
+            const target = nodeM.id;
+            const type = relationship.type; // Get the relationship type
+            links.push({
+                source,
+                target,
+                type
+            });
+        }
+    });
+
+    return { nodes, links };
+}
+*/
+
+        async function fetchNodeById(nodeId) {
+            const session = driver.session();
+            const result = await session.run(
+                `MATCH (n {id: $nodeId})
+                 RETURN n`,
+                { nodeId }
+            );
+            session.close();
+
+            if (result.records.length === 0) {
+                return null;
+            }
+
+            const node = result.records[0].get('n').properties;
+            node.x = Number(node.x);
+            node.y = Number(node.y);
+            return node;
+        }
+
+async function fetchNodeConnections(nodeId) {
+    const session = driver.session();
+
+    const resultTo = await session.run(
+        `MATCH (n {id: $nodeId})-[r]->(m)
+         RETURN m, size((m)--()) AS m_connections`,
+        { nodeId }
+    );
+    const resultFrom = await session.run(
+        `MATCH (n)<-[r]-(m)
+         WHERE n.id = $nodeId
+         RETURN m, size((m)--()) AS m_connections`,
+        { nodeId }
+    );
+    session.close();
+
+    const connectionsTo = [];
+    const connectionsFrom = [];
+
+    resultTo.records.forEach(record => {
+        const node = record.get('m').properties;
+        node.x = Number(node.x);
+        node.y = Number(node.y);
+        node.connections = record.get('m_connections'); // Add connections property
+        connectionsTo.push(node);
+    });
+
+    resultFrom.records.forEach(record => {
+        const node = record.get('m').properties;
+        node.x = Number(node.x);
+        node.y = Number(node.y);
+        node.connections = record.get('m_connections'); // Add connections property
+        connectionsFrom.push(node);
+    });
+
+    return { connectionsTo, connectionsFrom };
+}
+
+        async function updateNodePosition(id, x, y) {
+            const session = driver.session();
+            await session.run(
+                `MATCH (n {id: $id})
+                 SET n.x = $x, n.y = $y`,
+                { id, x, y }
+            );
+            session.close();
+        }
+
+async function updateNodeProperties(id, label, url, imageUrl, x, y, background, code) {
+            const session = driver.session();
+            await session.run(
+                `MATCH (n {id: $id})
+                 SET n.label = $label, n.url = $url, n.imageUrl = $imageUrl, n.x = $x, n.y = $y, n.background = $background, n.code = $code`,
+                { id, label, url, imageUrl, x, y, background, code }
+            );
+            session.close();
+        }
+
+async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
+            const session = driver.session();
+            const result = await session.run(
+                `MATCH (source {id: $sourceId})
+                 CREATE (newNode {id: randomUUID(), x: $x, y: $y, background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
+                 CREATE (source)-[:CONNECTED_TO]->(newNode)
+                 RETURN newNode`,
+                { sourceId, x, y, label, url, imageUrl}
+            );
+            session.close();
+            return result.records[0].get('newNode').properties;
+}
+
+/*
+async function createOrphanNode(x, y) {
+    const userInput = await openSearch('Create a new orphan node (TODO: Work with existing nodes)');
+    
+    let label = userInput.label;
+    let url = "";
+    let imageUrl = ""
+    
+    if (isValidLink(label) === true) {
+	label = await fetchPageTitle(label);
+	url = label;
+	//imageUrl = await getFavicon(label);
+    }
+    
+    if (isYouTubeLink(userInput.label) === true) {
+	imageUrl = getYouTubeThumbnail(userInput.label);
+	url = userInput.label;
+    }
+    
+    
+    if (label) {
+	if (!userInput.exists) {
+	    
+	    const session = driver.session();
+	    const result = await session.run(
+		`CREATE (newNode {id: randomUUID(), x: $x, y: $y, background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
+         RETURN newNode`,
+		{ x, y, label, url, imageUrl }
+	    );
+	    session.close();
+	    return result.records[0].get('newNode').properties;
+	    
+	} else {
+	    //TODO make a link to an existing node
+	    //await connectToNode(d.id, nodeTo=label);
+	}
+        drawNodesAndLinks(cur_trans);
+    }
+
+}*/
+
+async function createOrphanNode(x, y) {
+    const userInput = await openSearch('Create a new orphan node (TODO: Work with existing nodes)');
+    
+    let label = userInput.label;
+    let url = "";
+    let imageUrl = "";
+    
+    if (isValidLink(label) === true) {
+        label = await fetchPageTitle(label);
+        url = label;
+        // imageUrl = await getFavicon(label);
+    }
+    
+    if (isYouTubeLink(userInput.label) === true) {
+        imageUrl = getYouTubeThumbnail(userInput.label);
+        url = userInput.label;
+    }
+    
+    if (label) {
+        const session = driver.session();
+        
+        if (!userInput.exists) {
+            // Create a new node with x_positions and y_positions arrays
+            const result = await session.run(
+                `CREATE (newNode {id: randomUUID(), x_positions: [$x], y_positions: [$y], background: 'rgb(255,219,0)', label: $label, url: $url, imageUrl: $imageUrl})
+                 RETURN newNode`,
+                { x, y, label, url, imageUrl }
+            );
+            session.close();
+            return result.records[0].get('newNode').properties;
+        } else {
+            // Append to existing node's x_positions and y_positions arrays
+            const result = await session.run(
+                `MATCH (existingNode {label: $label})
+                 SET existingNode.x_positions = coalesce(existingNode.x_positions, []) + $x,
+                     existingNode.y_positions = coalesce(existingNode.y_positions, []) + $y
+                 RETURN existingNode`,
+                { label, x, y }
+            );
+            session.close();
+            return result.records[0].get('existingNode').properties;
+        }
+        
+        drawNodesAndLinks(cur_trans);
+    }
+}
+
+
+function drawGrid(transform) {
+        	cur_trans = transform;
+            gridLayer.selectAll(".grid-line").remove(); // Clear existing grid lines
+
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const x0 = -transform.x / transform.k;
+            const x1 = (width - transform.x) / transform.k;
+            const y0 = -transform.y / transform.k;
+            const y1 = (height - transform.y) / transform.k;
+
+            //console.log(`Visible Boundaries: x0=${x0}, x1=${x1}, y0=${y0}, y1=${y1}`);
+
+            const lines = [];
+
+            for (let x = Math.floor(x0 / gridSize) * gridSize; x < x1; x += gridSize) {
+                lines.push({ x1: x, y1: y0, x2: x, y2: y1 });
+            }
+            for (let y = Math.floor(y0 / gridSize) * gridSize; y < y1; y += gridSize) {
+                lines.push({ x1: x0, y1: y, x2: x1, y2: y });
+            }
+
+            gridLayer.selectAll(".grid-line")
+                .data(lines)
+                .enter()
+                .append("line")
+                .attr("class", "grid-line")
+                .attr("stroke", "#ddd")
+                .attr("stroke-width", 1)
+                .attr("x1", d => d.x1)
+                .attr("y1", d => d.y1)
+                .attr("x2", d => d.x2)
+                .attr("y2", d => d.y2);
+        }
+
+function connectionsToColor(conn, transparency=1.0) {
+    connections = Number(conn);
+    const colors = [
+        { connections: 0, color: [255, 255, 255] }, // White
+        { connections: 1, color: [255, 0, 0] },     // Red
+        { connections: 4, color: [255, 255, 0] },   // Yellow
+        { connections: 7, color: [0, 255, 0] }      // Green
+    ];
+
+    // Function to interpolate between two colors
+    function interpolateColor(color1, color2, factor) {
+        const result = color1.slice();
+        for (let i = 0; i < 3; i++) {
+            result[i] = Math.round(result[i] + factor * (color2[i] - color1[i]));
+        }
+        return result;
+    }
+
+    // Find the color range the connections value falls into
+    let lowerColor = colors[0];
+    let upperColor = colors[colors.length - 1];
+
+    for (let i = 0; i < colors.length - 1; i++) {
+        if (connections >= colors[i].connections && connections <= colors[i + 1].connections) {
+            lowerColor = colors[i];
+            upperColor = colors[i + 1];
+            break;
+        }
+    }
+
+    // Calculate the interpolation factor
+    const range = upperColor.connections - lowerColor.connections;
+    const factor = (connections - lowerColor.connections) / range;
+
+    // Interpolate to get the color
+    const color = interpolateColor(lowerColor.color, upperColor.color, factor);
+    return `rgb(${color[0]}, ${color[1]}, ${color[2]}, ${transparency})`;
+}
+
+
+async function updateRelationshipType(sourceId, targetId, newType) {
+    const session = driver.session();
+    await session.run(
+        `MATCH (a)-[r]->(b)
+         WHERE a.id = $sourceId AND b.id = $targetId
+         DELETE r
+         CREATE (a)-[newRel:${newType}]->(b)`,
+        { sourceId, targetId, newType }
+    );
+    session.close();
+}
+
+async function deleteRelationship(sourceId, targetId) {
+    const session = driver.session();
+    await session.run(
+        `MATCH (a)-[r]->(b)
+         WHERE a.id = $sourceId AND b.id = $targetId
+         DELETE r`,
+        { sourceId, targetId }
+    );
+    session.close();
+}
+
+async function deleteNode(nodeId) {
+    const session = driver.session();
+
+    try {
+        // Delete the node and all its relationships
+        await session.run(
+            'MATCH (n) WHERE n.id = $nodeId DETACH DELETE n',
+            { nodeId: nodeId }
+        );
+        console.log('Node deleted successfully:', nodeId);
+    } catch (error) {
+        console.error('Error deleting node:', error);
+        alert('An error occurred while deleting the node.');
+    } finally {
+        await session.close();
+    }
+}
+
+async function createRelationship(sourceId, targetId, type = "CONNECTED_TO") {
+    const session = driver.session();
+    await session.run(
+        `MATCH (a {id: $sourceId}), (b {id: $targetId})
+         CREATE (a)-[r:${type}]->(b)
+         RETURN r`,
+        { sourceId, targetId, type }
+    );
+    session.close();
+}
+
+
+
+function updateLinksAndNodes() {
+    // Define arrowhead markers for links
+    svg.selectAll("defs").remove(); // Remove existing definitions
+    const defs = svg.append("defs");
+    defs.append("marker")
+        .attr("id", "arrowhead")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 5)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#999");
+
+    // Function to calculate the new end coordinates for the arrowhead
+    function getNewEndCoordinates(sourceX, sourceY, targetX, targetY, radius) {
+        const dx = targetX - sourceX;
+        const dy = targetY - sourceY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const scale = (length - radius) / length;
+        const newTargetX = sourceX + dx * scale;
+        const newTargetY = sourceY + dy * scale;
+        return { x: newTargetX, y: newTargetY };
+    }
+
+    // Update links
+    const link = linkLayer.selectAll("line").data(links, d => `${d.source}-${d.target}`);
+
+    link.exit().remove();
+
+    link.enter()
+        .append("line")
+        .merge(link)
+        .attr("stroke", "#999")
+        .attr("stroke-width", 2)
+        .attr("marker-end", "url(#arrowhead)")
+        .attr("x1", d => nodes.find(n => n.id === d.source).x)
+        .attr("y1", d => nodes.find(n => n.id === d.source).y)
+        .attr("x2", d => {
+            const sourceNode = nodes.find(n => n.id === d.source);
+            const targetNode = nodes.find(n => n.id === d.target);
+            const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10); // 10 is the radius of the nodes
+            return newCoords.x;
+        })
+        .attr("y2", d => {
+            const sourceNode = nodes.find(n => n.id === d.source);
+            const targetNode = nodes.find(n => n.id === d.target);
+            const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+            return newCoords.y;
+        });
+
+    // Update link labels
+    const linkLabel = linkLayer.selectAll(".link-label").data(links, d => `${d.source}-${d.target}`);
+
+    linkLabel.exit().remove();
+
+    linkLabel.enter()
+        .append("text")
+        .attr("class", "link-label")
+        .merge(linkLabel)
+        .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+        .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2)
+        .attr("fill", "#eee")
+        .attr("font-size", "10px")
+        .attr("text-anchor", "middle")
+        .attr("dy", -5) // Adjust the position slightly above the link
+        .text(d => d.type === "CONNECTED_TO" ? "✦" : d.type)
+        .on("dblclick", async function (event, d) {
+            const newType = prompt("Enter new relationship type:", d.type);
+            if (newType) {
+                await updateRelationshipType(d.source, d.target, newType);
+                d.type = newType;
+                drawGrid(cur_trans);
+
+                drawNodesAndLinks(cur_trans);
+            }
+        })
+        .on("contextmenu", async function (event, d) {
+            event.preventDefault();
+            const confirmed = confirm("Do you want to delete this interconnection?");
+            if (confirmed) {
+                await deleteRelationship(d.source, d.target);
+                links = links.filter(link => link.source !== d.source || link.target !== d.target);
+                drawGrid(cur_trans);
+
+                drawNodesAndLinks(cur_trans);
+            }
+        });
+
+    // Separate nodes with and without image URLs
+    const nodesWithImages = nodes.filter(d => d.imageUrl);
+    const nodesWithoutImages = nodes.filter(d => !d.imageUrl);
+
+    // Update circles
+    const circle = nodeLayer.selectAll("circle").data(nodesWithoutImages, d => d.id);
+
+    circle.exit().remove();
+
+    circle.enter()
+        .append("circle")
+        .attr("r", 10)  // Adjust radius as needed
+        .merge(circle)
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("fill", d => connectionsToColor(d.connections) || "red")
+        .on("mousedown", async function (event, d) {
+            selectNode(d);
+        })
+        .call(d3.drag()
+            .on("start", function (event, d) {
+                d3.select(this).raise().attr("stroke", "black");
+            })
+            .on("drag", function (event, d) {
+                d3.select(this).attr("cx", d.x = event.x).attr("cy", d.y = event.y);
+                
+                // Update the node's position in the nodes array
+                nodes.find(n => n.id === d.id).x = d.x;
+                nodes.find(n => n.id === d.id).y = d.y;
+
+                // Update the links connected to the node during dragging
+                linkLayer.selectAll("line")
+                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
+                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
+                    .attr("x2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.x;
+                    })
+                    .attr("y2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.y;
+                    });
+
+                // Update link labels position during dragging
+                linkLayer.selectAll(".link-label")
+                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
+                
+                // Update labels position during dragging
+                nodeLayer.selectAll("text")
+                    .attr("x", d => d.imageUrl ? d.x + 30 : d.x + 10)
+                    .attr("y", d => d.imageUrl ? d.y + 10 : d.y);
+                
+                // Update inspector with current position
+                document.getElementById("nodeX").value = d.x;
+                document.getElementById("nodeY").value = d.y;
+            })
+            .on("end", async function (event, d) {
+                d3.select(this).attr("stroke", null);
+                await updateNodePosition(d.id, d.x, d.y);
+
+                // Update the node's position in the nodes array
+                nodes.find(n => n.id === d.id).x = d.x;
+                nodes.find(n => n.id === d.id).y = d.y;
+
+                // Update the links connected to the node after dragging ends
+                linkLayer.selectAll("line")
+                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
+                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
+                    .attr("x2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.x;
+                    })
+                    .attr("y2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.y;
+                    });
+
+                // Update link labels position after dragging ends
+                linkLayer.selectAll(".link-label")
+                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
+
+                // Update labels position after dragging ends
+                nodeLayer.selectAll("text")
+                    .attr("x", d => d.imageUrl ? d.x + 30 : d.x + 10)
+                    .attr("y", d => d.imageUrl ? d.y + 10 : d.y);
+            })
+        )
+        .on("contextmenu", async function (event, d) {
+            event.preventDefault();
+            const confirmed = confirm("Do you want to delete this node?");
+            if (confirmed) {
+                await deleteNode(d.id);
+                
+                // Remove the node and its related links from the data
+                nodes = nodes.filter(node => node.id !== d.id);
+                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
+                
+                // Redraw the grid and nodes/links
+                drawGrid(cur_trans);
+                drawNodesAndLinks(cur_trans);
+            }
+        })
+        .on("dblclick", async function (event, d) {
+            const newX = d.x + 20; // New node's X coordinate
+            const newY = d.y + 20; // New node's Y coordinate
+            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
+            
+            let label = userInput.label;
+            let url = "";
+	    let imageUrl = ""
+
+	    if (isValidLink(label) === true) {
+		label = await fetchPageTitle(label);
+		url = label;
+		//imageUrl = await getFavicon(label);
+	    }
+	    
+	    if (isYouTubeLink(userInput.label) === true) {
+		imageUrl = getYouTubeThumbnail(userInput.label);
+		url = userInput.label;
+	    }
+            
+            
+            if (label) {
+		if (!userInput.exists) {
+                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
+		} else {
+		    await connectToNode(d.id, nodeTo=label);
+		}
+                drawNodesAndLinks(cur_trans);
+            }
+        });
+
+    // Update images
+    const image = nodeLayer.selectAll("image").data(nodesWithImages, d => d.id);
+
+    image.exit().remove();
+
+    image.enter()
+        .append("image")
+        .attr("width", 40)  // Adjust width as needed
+        .attr("height", 40) // Adjust height as needed
+        .attr("x", d => d.x - 20)  // Adjust x position as needed
+        .attr("y", d => d.y - 20)  // Adjust y position as needed
+        .attr("xlink:href", d => d.imageUrl)
+        .merge(image)
+        .attr("x", d => d.x - 20)  // Adjust x position as needed
+        .attr("y", d => d.y - 20)  // Adjust y position as needed
+        .on("mousedown", async function (event, d) {
+            selectNode(d);
+        })
+        .call(d3.drag()
+            .on("start", function (event, d) {
+                d3.select(this).raise().attr("stroke", "black");
+            })
+            .on("drag", function (event, d) {
+                d3.select(this).attr("x", d.x = event.x - 20).attr("y", d.y = event.y - 20);
+                
+                // Update the node's position in the nodes array
+                nodes.find(n => n.id === d.id).x = d.x + 20;
+                nodes.find(n => n.id === d.id).y = d.y + 20;
+
+                // Update the links connected to the node during dragging
+                linkLayer.selectAll("line")
+                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
+                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
+                    .attr("x2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.x;
+                    })
+                    .attr("y2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.y;
+                    });
+
+                // Update link labels position during dragging
+                linkLayer.selectAll(".link-label")
+                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
+                
+                // Update labels position during dragging
+                nodeLayer.selectAll("text")
+                    .attr("x", d => d.x + 30)
+                    .attr("y", d => d.y + 10);
+                
+                // Update inspector with current position
+                document.getElementById("nodeX").value = d.x + 20;
+                document.getElementById("nodeY").value = d.y + 20;
+            })
+            .on("end", async function (event, d) {
+                d3.select(this).attr("stroke", null);
+                await updateNodePosition(d.id, d.x + 20, d.y + 20);
+
+                // Update the node's position in the nodes array
+                nodes.find(n => n.id === d.id).x = d.x + 20;
+                nodes.find(n => n.id === d.id).y = d.y + 20;
+
+                // Update the links connected to the node after dragging ends
+                linkLayer.selectAll("line")
+                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
+                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
+                    .attr("x2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.x;
+                    })
+                    .attr("y2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.y;
+                    });
+
+                // Update link labels position after dragging ends
+                linkLayer.selectAll(".link-label")
+                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
+
+                // Update labels position after dragging ends
+                nodeLayer.selectAll("text")
+                    .attr("x", d => d.x + 30)
+                    .attr("y", d => d.y + 10);
+            })
+        )
+        .on("contextmenu", async function (event, d) {
+            event.preventDefault();
+            const confirmed = confirm("Do you want to delete this node?");
+            if (confirmed) {
+                await deleteNode(d.id);
+                
+                // Remove the node and its related links from the data
+                nodes = nodes.filter(node => node.id !== d.id);
+                links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
+                
+                // Redraw the grid and nodes/links
+                drawGrid(cur_trans);
+                drawNodesAndLinks(cur_trans);
+            }
+        })
+        .on("dblclick", async function (event, d) {
+            const newX = d.x + 20; // New node's X coordinate
+            const newY = d.y + 20; // New node's Y coordinate
+            const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
+            
+            let label = userInput.label;
+            let url = "";
+	    let imageUrl= ""
+	    
+	    if (isValidLink(label) === true) {
+		label = await fetchPageTitle(label);
+		url = label;
+		//imageUrl = await getFavicon(label);
+	    }
+	    
+	    if (isYouTubeLink(userInput.label) === true) {
+		imageUrl = getYouTubeThumbnail(userInput.label);
+		url = userInput.label
+	    }
+            
+            if (label) {
+		if (!userInput.exists) {
+                    await createNodeAndLink(d.id, newX, newY, label, url, imageUrl);
+		} else {
+		    await connectToNode(d.id, nodeTo=label);
+		}
+                drawNodesAndLinks(cur_trans);
+            }
+        });
+
+    // Update labels
+    const labels = nodeLayer.selectAll("text").data(nodes, d => d.id);
+
+    labels.exit().remove();
+
+    labels.enter()
+        .append("text")
+        .merge(labels)
+        .attr("x", d => d.imageUrl ? d.x + 30 : d.x + 10)  // Adjust x position based on node type
+        .attr("y", d => d.imageUrl ? d.y + 10 : d.y)
+        .text(d => d.label)
+        .attr("font-size", "12px")
+        .attr("fill", "#eee");
+}
+
+
+
+
+
+/*
+function updateLinksAndNodes() {
+    // Define arrowhead markers for links
+    svg.selectAll("defs").remove(); // Remove existing definitions
+    const defs = svg.append("defs");
+    defs.append("marker")
+        .attr("id", "arrowhead")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 5)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .attr("fill", "#999");
+
+    // Function to calculate the new end coordinates for the arrowhead
+    function getNewEndCoordinates(sourceX, sourceY, targetX, targetY, radius) {
+        const dx = targetX - sourceX;
+        const dy = targetY - sourceY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const scale = (length - radius) / length;
+        const newTargetX = sourceX + dx * scale;
+        const newTargetY = sourceY + dy * scale;
+        return { x: newTargetX, y: newTargetY };
+    }
+
+    // Update links
+    const link = linkLayer.selectAll("line").data(links, d => `${d.source}-${d.target}`);
+
+    link.exit().remove();
+
+    link.enter()
+        .append("line")
+        .merge(link)
+        .attr("stroke", "#999")
+        .attr("stroke-width", 2)
+        .attr("marker-end", "url(#arrowhead)")
+        .attr("x1", d => nodes.find(n => n.id === d.source).x)
+        .attr("y1", d => nodes.find(n => n.id === d.source).y)
+        .attr("x2", d => {
+            const sourceNode = nodes.find(n => n.id === d.source);
+            const targetNode = nodes.find(n => n.id === d.target);
+            const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10); // 10 is the radius of the nodes
+            return newCoords.x;
+        })
+        .attr("y2", d => {
+            const sourceNode = nodes.find(n => n.id === d.source);
+            const targetNode = nodes.find(n => n.id === d.target);
+            const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+            return newCoords.y;
+        });
+
+    // Update link labels
+    const linkLabel = linkLayer.selectAll(".link-label").data(links, d => `${d.source}-${d.target}`);
+
+    linkLabel.exit().remove();
+
+    linkLabel.enter()
+        .append("text")
+        .attr("class", "link-label")
+        .merge(linkLabel)
+        .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+        .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2)
+        .attr("fill", "#eee")
+        .attr("font-size", "10px")
+        .attr("text-anchor", "middle")
+        .attr("dy", -5) // Adjust the position slightly above the link
+        .text(d => d.type === "CONNECTED_TO" ? "✦" : d.type)
+        .on("dblclick", async function (event, d) {
+            const newType = prompt("Enter new relationship type:", d.type);
+            if (newType) {
+                await updateRelationshipType(d.source, d.target, newType);
+                d.type = newType;
+		drawGrid(cur_trans);
+
+                drawNodesAndLinks(cur_trans);
+		
+            }
+        })
+        .on("contextmenu", async function (event, d) {
+            event.preventDefault();
+            const confirmed = confirm("Do you want to delete this interconnection?");
+            if (confirmed) {
+                await deleteRelationship(d.source, d.target);
+                links = links.filter(link => link.source !== d.source || link.target !== d.target);
+		        drawGrid(cur_trans);
+
+                drawNodesAndLinks(cur_trans);
+            }
+        });
+
+    // Update circles
+    const circle = nodeLayer.selectAll("circle").data(nodes, d => d.id);
+
+    circle.exit().remove();
+
+    circle.enter()
+        .append("circle")
+        .attr("r", 10)  // Double the radius
+        .merge(circle)
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y)
+        .attr("fill", d => connectionsToColor(d.connections) || "red")
+        .on("mousedown", async function (event, d) {
+            selectNode(d);
+        })
+        .call(d3.drag()
+            .on("start", function (event, d) {
+                d3.select(this).raise().attr("stroke", "black");
+            })
+            .on("drag", function (event, d) {
+                d3.select(this).attr("cx", d.x = event.x).attr("cy", d.y = event.y);
+                
+                // Update the node's position in the nodes array
+                nodes.find(n => n.id === d.id).x = d.x;
+                nodes.find(n => n.id === d.id).y = d.y;
+
+                // Update the links connected to the node during dragging
+                linkLayer.selectAll("line")
+                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
+                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
+                    .attr("x2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.x;
+                    })
+                    .attr("y2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.y;
+                    });
+
+                // Update link labels position during dragging
+                linkLayer.selectAll(".link-label")
+                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
+                
+                // Update labels position during dragging
+                nodeLayer.selectAll("text")
+                    .attr("x", d => d.x + 10)
+                    .attr("y", d => d.y);
+                
+                // Update inspector with current position
+                document.getElementById("nodeX").value = d.x;
+                document.getElementById("nodeY").value = d.y;
+            })
+            .on("end", async function (event, d) {
+                d3.select(this).attr("stroke", null);
+                await updateNodePosition(d.id, d.x, d.y);
+
+                // Update the node's position in the nodes array
+                nodes.find(n => n.id === d.id).x = d.x;
+                nodes.find(n => n.id === d.id).y = d.y;
+
+                // Update the links connected to the node after dragging ends
+                linkLayer.selectAll("line")
+                    .attr("x1", l => nodes.find(n => n.id === l.source).x)
+                    .attr("y1", l => nodes.find(n => n.id === l.source).y)
+                    .attr("x2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.x;
+                    })
+                    .attr("y2", l => {
+                        const sourceNode = nodes.find(n => n.id === l.source);
+                        const targetNode = nodes.find(n => n.id === l.target);
+                        const newCoords = getNewEndCoordinates(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y, 10);
+                        return newCoords.y;
+                    });
+
+                // Update link labels position after dragging ends
+                linkLayer.selectAll(".link-label")
+                    .attr("x", d => (nodes.find(n => n.id === d.source).x + nodes.find(n => n.id === d.target).x) / 2)
+                    .attr("y", d => (nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.target).y) / 2);
+
+                // Update labels position after dragging ends
+                nodeLayer.selectAll("text")
+                    .attr("x", d => d.x + 10)
+                    .attr("y", d => d.y);
+            })
+             )
+	.on("contextmenu", async function (event, d) {
+            event.preventDefault();
+            const confirmed = confirm("Do you want to delete this node?");
+            if (confirmed) {
+		await deleteNode(d.id);
+		
+		// Remove the node and its related links from the data
+		nodes = nodes.filter(node => node.id !== d.id);
+		links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
+		
+		// Redraw the grid and nodes/links
+		drawGrid(cur_trans);
+		drawNodesAndLinks(cur_trans);
+            }
+	})
+        .on("dblclick", async function (event, d) {
+	    const newX = d.x + 20; // New node's X coordinate
+	    const newY = d.y + 20; // New node's Y coordinate
+	    const userInput = prompt("Enter name for new node:");
+	    
+	    let label = "";
+	    let url = "";
+	    
+	    if (isValidLink(userInput)) {
+		url = userInput;
+		label = await fetchPageTitle(url);
+		if (label === "Failed to fetch title.") {
+		    label = url;
+		}
+	    } else {
+		label = userInput;
+	    }
+	    
+	    if (label) {
+		await createNodeAndLink(d.id, newX, newY, label, url);
+		drawNodesAndLinks(cur_trans);
+	    }
+	    
+        });
+
+    // Update labels
+    const labels = nodeLayer.selectAll("text").data(nodes, d => d.id);
+
+    labels.exit().remove();
+
+    labels.enter()
+        .append("text")
+        .merge(labels)
+        .attr("x", d => d.x + 10)
+        .attr("y", d => d.y)
+        .text(d => d.label)
+        .attr("font-size", "12px")
+        .attr("fill", "#eee");
+}
+*/
+
+
+
+
+
+
+
+
+
+async function drawNodesAndLinks(transform) {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const x0 = -transform.x / transform.k;
+    const x1 = (width - transform.x) / transform.k;
+    const y0 = -transform.y / transform.k;
+    const y1 = (height - transform.y) / transform.k;
+
+    const { nodes, links } = await fetchNodesAndLinks(x0, x1, y0, y1);
+
+    updateLinksAndNodes();
+}
+
+
+async function fetchPageTitle(url) {
+    const proxyUrl = `/proxy?url=${encodeURIComponent(url)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        const text = await response.text();
+        console.log('Fetched HTML:', text);  // Log the fetched HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const titleElement = doc.querySelector('title');
+        if (titleElement) {
+            return titleElement.innerText;
+        } else {
+            console.warn('No title element found for URL:', url);
+            return url;
+        }
+    } catch (error) {
+        console.error("Error fetching title:", error);
+        return "Failed to fetch title.";
+    }
+}
+
+function isValidLink(url) {
+    const urlPattern = new RegExp(
+        '^(https?:\\/\\/)' + // protocol (required)
+        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|' + // domain name
+        '((\\d{1,3}\\.){3}\\d{1,3})|' + // OR ip (v4) address
+        '\\[([a-f\\d]{1,4}:){7,7}[a-f\\d]{1,4}\\]|' + // OR ip (v6) address
+        'localhost)' + // OR localhost
+        '(\\:\\d+)?' + // port (optional)
+        '(\\/[-a-z\\d%_.~+]*)*' + // path (optional)
+        '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string (optional)
+        '(\\#[-a-z\\d_]*)?$', 'i' // fragment locator (optional)
+    );
+    return urlPattern.test(url);
+}
+
+
+
+function isYouTubeLink(url) {
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+    return youtubeRegex.test(url);
+}
+
+
+async function connectToNode(nodeId, nodeTo="") {
+    let targetLabel;
+    let resultExists;
+    if (nodeTo === "") {
+	// Prompt the user for the label of the node to connect to
+	const searchResult = await openSearch('Search for a node to connect to');
+	targetLabel = searchResult.label;
+	resultExists = searchResult.exists;
+    } else {
+	targetLabel = nodeTo;
+	resultExists = true;
+    }
+    
+    if (targetLabel && resultExists) {
+        const session = driver.session();
+
+        try {
+            // Find the target node with the specified label
+            const result = await session.run(
+                'MATCH (targetNode {label: $label}) RETURN targetNode LIMIT 1',
+                { label: targetLabel }
+            );
+
+            if (result.records.length > 0) {
+                const targetNode = result.records[0].get('targetNode');
+                const targetNodeId = targetNode.properties.id;
+
+                console.log('Target node found:', targetNode);
+
+                // Create the relationship between the current node and the target node using the id property
+                const connectResult = await session.run(
+                    'MATCH (n1 {id: $nodeId}), (n2 {id: $targetNodeId}) CREATE (n1)-[:CONNECTED_TO]->(n2) RETURN n1, n2',
+                    { nodeId: nodeId, targetNodeId: targetNodeId }
+                );
+
+                console.log('Connect result:', connectResult);
+
+                if (connectResult.records.length > 0) {
+                    //alert('Nodes connected successfully!');
+                } else {
+                    alert('Failed to create the connection.');
+                }
+            } else {
+                alert('No node found with the specified label.');
+            }
+        } catch (error) {
+            console.error('Error connecting nodes:', error);
+            alert('An error occurred while connecting the nodes.');
+        } finally {
+            await session.close();
+        }
+    }
+}
+
+
+async function connectFromNode(nodeId) {
+    // Prompt the user for the label of the node to connect from
+    const searchResult = await openSearch('Search for the node to connect from');
+    sourceLabel = searchResult.label
+    
+    if (sourceLabel && searchResult.exists) {
+        const session = driver.session();
+
+        try {
+            // Find the source node with the specified label
+            const result = await session.run(
+                'MATCH (sourceNode {label: $label}) RETURN sourceNode LIMIT 1',
+                { label: sourceLabel }
+            );
+
+            if (result.records.length > 0) {
+                const sourceNode = result.records[0].get('sourceNode');
+                const sourceNodeId = sourceNode.properties.id;
+
+                console.log('Source node found:', sourceNode);
+
+                // Create the relationship between the source node and the current node using the id property
+                const connectResult = await session.run(
+                    'MATCH (n1 {id: $sourceNodeId}), (n2 {id: $nodeId}) CREATE (n1)-[:CONNECTED_TO]->(n2) RETURN n1, n2',
+                    { sourceNodeId: sourceNodeId, nodeId: nodeId }
+                );
+
+                console.log('Connect result:', connectResult);
+
+                if (connectResult.records.length > 0) {
+                    alert('Nodes connected successfully!');
+                } else {
+                    alert('Failed to create the connection.');
+                }
+            } else {
+                alert('No node found with the specified label.');
+            }
+        } catch (error) {
+            console.error('Error connecting nodes:', error);
+            alert('An error occurred while connecting the nodes.');
+        } finally {
+            await session.close();
+        }
+    }
+}
+
+
+        async function selectNode(d) {
+            const inspector = document.getElementById("inspector");
+            const codeEditor = document.getElementById("code-editor");
+            inspector.style.display = "block";
+            codeEditor.style.display = "block";
+            document.getElementById("nodeId").value = d.id;
+            document.getElementById("nodeLabel").value = d.label;
+	    document.getElementById("nodeUrl").value = d.url;
+	    document.getElementById("nodeImageUrl").value = d.imageUrl;
+	    
+	    if (isYouTubeLink(d.url) === true) {
+		setVideoUrl(d.url);
+		setVideoTitle(d.label);
+	    } else {
+		const video = document.getElementById('video-container');
+		video.style.display = 'none';
+	    }
+	    
+	    setCodeEditorTitle(d.label);
+            document.getElementById("nodeX").value = d.x;
+            document.getElementById("nodeY").value = d.y;
+            document.getElementById("nodeBackground").value = d.background;
+            document.getElementById("nodeCode").value = d.code || "";
+
+	    // Create functions for the inspector's link buttons
+	    const linkToButton = document.getElementById('linkConnectionsToButton');
+	    linkToButton.onclick = () => {
+		connectToNode(d.id);
+            };
+
+	    const linkFromButton = document.getElementById('linkConnectionsFromButton');
+	    linkFromButton.onclick = function() {
+		connectFromNode(d.id);
+            };
+	    
+	    
+            // Fetch and display connections
+            const connectionsToList = document.getElementById("connectionsToList");
+            const connectionsFromList = document.getElementById("connectionsFromList");
+            connectionsToList.innerHTML = ''; // Clear existing connections
+            connectionsFromList.innerHTML = ''; // Clear existing connections
+            const { connectionsTo, connectionsFrom } = await fetchNodeConnections(d.id);
+            connectionsTo.forEach(node => {
+                const listItem = document.createElement("li");
+                listItem.textContent = node.label;
+                listItem.style.cursor = "pointer";
+		listItem.style.borderBottom = "3px solid "+connectionsToColor(node.connections, transparency=0.5)
+                listItem.addEventListener("click", async () => {
+                    const nodeDetails = await fetchNodeById(node.id);
+                    if (nodeDetails) {
+                        selectNode(nodeDetails);
+                        const transform = d3.zoomTransform(svg.node());
+                        svg.transition().call(zoom.translateTo, nodeDetails.x, nodeDetails.y);
+                    }
+                });
+                connectionsToList.appendChild(listItem);
+            });
+            connectionsFrom.forEach(node => {
+                const listItem = document.createElement("li");
+                listItem.textContent = node.label;
+                listItem.style.cursor = "pointer";
+		listItem.style.borderBottom = "3px solid "+connectionsToColor(node.connections, transparency=0.5)
+                listItem.addEventListener("click", async () => {
+                    const nodeDetails = await fetchNodeById(node.id);
+                    if (nodeDetails) {
+                        selectNode(nodeDetails);
+                        const transform = d3.zoomTransform(svg.node());
+                        svg.transition().call(zoom.translateTo, nodeDetails.x, nodeDetails.y);
+                    }
+                });
+                connectionsFromList.appendChild(listItem);
+            });
+        }
+
+/*
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                const transform = event.transform;
+                g.attr("transform", transform);
+                drawGrid(transform);
+            })
+            .on("end", (event) => {
+                const transform = event.transform;
+                drawNodesAndLinks(transform);
+            });
+
+            svg.call(zoom);
+*/
+
+// Function to save the transform to local storage
+function saveTransformToLocalStorage(transform) {
+    localStorage.setItem('d3-zoom-transform', JSON.stringify(transform));
+}
+
+// Function to retrieve the transform from local storage
+function getTransformFromLocalStorage() {
+    const transform = localStorage.getItem('d3-zoom-transform');
+    return transform ? JSON.parse(transform) : null;
+}
+
+let cur_trans = null;
+
+// Initialize zoom
+const zoom = d3.zoom()
+
+    .scaleExtent([0.05, 6])
+    .on("zoom", (event) => {
+        const transform = event.transform;
+	cur_trans = transform;
+        g.attr("transform", transform);
+        drawGrid(transform);
+        saveTransformToLocalStorage(transform); // Save on zoom
+    })
+    .on("end", (event) => {
+        const transform = event.transform;
+	cur_trans = transform;
+        drawNodesAndLinks(transform);
+        saveTransformToLocalStorage(transform); // Save on end
+    });
+
+// Apply saved transform if it exists
+const savedTransform = getTransformFromLocalStorage();
+if (savedTransform) {
+    svg.call(zoom.transform, d3.zoomIdentity.translate(savedTransform.x, savedTransform.y).scale(savedTransform.k));
+}
+
+
+        // Function to handle double-click event
+function handleDoubleClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+            // Get the mouse coordinates relative to the SVG element
+
+                const [x, y] = d3.pointer(event, g.node());
+
+    createOrphanNode(x,y);
+        }
+
+        // Attach the double-click event listener to the SVG canvas
+        svg.on("dblclick", handleDoubleClick);
+
+// Apply the zoom behavior to the SVG element
+svg.call(zoom).on("dblclick.zoom", null);
+
+
+
+        // Initial draw
+        drawGrid(d3.zoomIdentity);
+        drawNodesAndLinks(d3.zoomIdentity);
+
+        // Auto-save for inspector and code editor
+        const inputs = document.querySelectorAll("#inspector input, #code-editor textarea");
+        inputs.forEach(input => {
+            input.addEventListener("input", async () => {
+		console.log("input");
+                const id = document.getElementById("nodeId").value;
+                const label = document.getElementById("nodeLabel").value;
+		const url = document.getElementById("nodeUrl").value;
+		const imageUrl = document.getElementById("nodeImageUrl").value;
+                const x = parseFloat(document.getElementById("nodeX").value);
+                const y = parseFloat(document.getElementById("nodeY").value);
+                const background = document.getElementById("nodeBackground").value;
+                const code = document.getElementById("nodeCode").value;
+                await updateNodeProperties(id, label, url, imageUrl, x, y, background, code);
+
+                // Update the node in the visualization
+                const node = nodeLayer.selectAll("circle").filter(d => d.id === id)
+                    .attr("cx", x)
+                    .attr("cy", y)
+                    .attr("fill", background);
+
+                const labelElement = nodeLayer.selectAll("text").filter(d => d.id === id)
+                    .attr("x", x + 10)
+                    .attr("y", y)
+                    .text(label);
+
+                // Update the links connected to the node
+                linkLayer.selectAll("line").filter(d => d.source === id || d.target === id)
+                    .attr("x1", d => nodes.find(n => n.id === d.source).x)
+                    .attr("y1", d => nodes.find(n => n.id === d.source).y)
+                    .attr("x2", d => nodes.find(n => n.id === d.target).x)
+                    .attr("y2", d => nodes.find(n => n.id === d.target).y);
+            });
+        });
+    </script>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const searchTitle = document.getElementById('searchTitle');
+            const resultsContainer = document.getElementById('results');
+            const spotlightSearch = document.getElementById('spotlightSearch');
+            let currentIndex = -1;
+            let currentResults = [];
+            let resolveSearch;
+
+            // Function to open the search interface and return a Promise
+            window.openSearch = function(title) {
+                return new Promise((resolve) => {
+                    resolveSearch = resolve;
+                    searchTitle.textContent = title;
+                    spotlightSearch.style.display = 'block';
+                    searchInput.focus();
+                });
+            }
+
+            // Function to close the search interface
+            function closeSearch() {
+                spotlightSearch.style.display = 'none';
+                currentIndex = -1;
+                resultsContainer.innerHTML = '';
+                searchInput.value = '';
+            }
+
+            // Add event listener to close search on pressing Escape
+            document.addEventListener('keydown', (event) => {
+                if (spotlightSearch.style.display === 'block') {
+                    if (event.key === 'Escape') {
+                        closeSearch();
+                        resolveSearch({ label: null, exists: false });
+                    } else if (event.key === 'ArrowDown') {
+                        navigateResults(1);
+                    } else if (event.key === 'ArrowUp') {
+                        navigateResults(-1);
+                    } else if (event.key === 'Enter') {
+                        if (event.shiftKey) {
+                            selectInput();
+                        } else {
+                            selectResult();
+                        }
+                    }
+                }
+            });
+
+            // Add event listener to handle input and search
+            searchInput.addEventListener('input', (event) => {
+                const query = event.target.value;
+                if (query) {
+                    searchNeo4j(query);
+                } else {
+                    resultsContainer.innerHTML = '';
+                }
+            });
+
+
+            // Function to perform the search in Neo4j
+            async function searchNeo4j(query) {
+                const fuzzyQuery = `(?i).*${query}.*`;
+                const session = driver.session();
+                try {
+                    const result = await session.run(
+                        `MATCH (n) WHERE n.label =~ $query RETURN n LIMIT 10`,
+                        { query: fuzzyQuery }
+                    );
+                    const nodes = result.records.map(record => record.get('n').properties);
+                    currentResults = nodes;
+                    displayResults(nodes);
+                } catch (error) {
+                    console.error(error);
+                } finally {
+                    await session.close();
+                }
+            }
+
+            // Function to display search results
+            function displayResults(results) {
+                resultsContainer.innerHTML = '';
+                results.forEach((result, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'result-item';
+                    item.textContent = result.label;
+                    item.dataset.index = index;
+                    item.addEventListener('click', () => {
+                        selectResult(index);
+                    });
+                    resultsContainer.appendChild(item);
+                });
+            }
+
+            // Function to navigate results with arrow keys
+            function navigateResults(direction) {
+                if (currentResults.length > 0) {
+                    currentIndex = (currentIndex + direction + currentResults.length) % currentResults.length;
+                    updateSelection();
+                }
+            }
+
+            // Function to update the selected result
+            function updateSelection() {
+                const items = resultsContainer.getElementsByClassName('result-item');
+                Array.from(items).forEach((item, index) => {
+                    if (index === currentIndex) {
+                        item.classList.add('selected');
+                        item.scrollIntoView({ block: 'nearest' });
+                    } else {
+                        item.classList.remove('selected');
+                    }
+                });
+            }
+
+            // Function to select the current result
+            function selectResult(index = currentIndex) {
+                if (index >= 0 && index < currentResults.length) {
+                    const selectedItem = currentResults[index];
+                    closeSearch();
+                    resolveSearch({ label: selectedItem.label, exists: true, id: selectedItem.id });
+                }
+            }
+
+            // Function to select the current input
+            function selectInput() {
+                const currentInput = searchInput.value;
+                if (currentInput) {
+                    closeSearch();
+                    resolveSearch({ label: currentInput, exists: false });
+                }
+            }
+
+	    window.spotlightZoom = async function() {
+		const userInput = await openSearch('Search for and zoom to a node on the canvas');
+		const nodeDetails = await fetchNodeById(userInput.id);
+                if (nodeDetails) {
+                    selectNode(nodeDetails);
+
+		    const transform = d3.zoomTransform(svg.node());
+                    svg.transition().call(zoom.translateTo, nodeDetails.x, nodeDetails.y);
+		}
+
+	    }
+
+	    // Add event listener for keydown to check for Ctrl + Space
+	    document.addEventListener('keydown', function(event) {
+		if (event.ctrlKey && event.code === 'Space') {
+		    event.preventDefault();  // Prevent default action if needed
+		    window.spotlightZoom();
+		}
+	    });
+        });
+
+</script>
+    
+    
+    
+    
+    
+</body>
+</html>
+
