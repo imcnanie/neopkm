@@ -2321,6 +2321,9 @@ async function selectNode(event,d) {
     if (d.type === "inherited") {
 	document.getElementById("nodeCode").value = await getInheritedCode(d.id) || "";
 	setReadOnlyFields(true);
+    } else if (d.type === "grouping_box"){
+	document.getElementById("nodeCode").value = d.code || "";
+	setReadOnlyFields(true);	
     } else {
 	document.getElementById("nodeCode").value = d.code || "";
 	setReadOnlyFields(false);
