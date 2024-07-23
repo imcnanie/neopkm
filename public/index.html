@@ -6,6 +6,8 @@
     <title>Infinite Grid with D3.js and Neo4j</title>
     <script src="/d3.v6.min.js"></script>
     <script src="/neo4j-driver"></script>
+    <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
+	
     <style>
 
 html, body {
@@ -15,11 +17,15 @@ html, body {
     background-color: #121212;
     color: #e0e0e0;
     font-family: 'Arial', sans-serif;
+    display: flex;
+    
+    flex-direction: column;
+
 }
 
 svg {
     width: 100%;
-    height: 70%;
+    height: 100%;
     background-color: #1e1e1e;
     cursor: grab;
     border-bottom: 1px solid #333;
@@ -110,38 +116,87 @@ svg {
 }
 
 
-  .flex-container {
-            display: flex;
-            width: 100%;
-            height: 30%;
-        }
 
-        #code-editor, #video-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #1e1e1e;
-            border-top: 1px solid #333;
-        }
+
+
+
+.title-bar {
+    background-color: #333;
+    padding: 10px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    color: #e0e0e0;
+    width: 100%;
+    z-index: 2;
+    cursor: row-resize;
+    user-select: none;
+}
+
+.title-bar button {
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 1.2em;
+    margin-right: 10px;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+.title-bar button.hidden {
+    opacity: 0.5;
+}
+
+.flex-container-vertical {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 50px); /* Adjust the height considering the title bar */
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.flex-container {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #444;
+    overflow: hidden;
+    background-color: #1e1e1e;
+}
+
+textarea {
+    flex: 1;
+    resize: none;
+    padding: 10px;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border: none;
+}
+
+iframe {
+    flex: 1;
+    border: none;
+}
+
+
+
+
+
 
 #video-container {
-    display: none;
+    //display: none;
     }
 
-        #code-editor .title-bar, #video-container .title-bar {
-            background: #333;
-            padding: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
 
-        #code-editor .title-bar button, #video-container .title-bar button {
-            background: none;
-            border: none;
-            color: #e0e0e0;
-            cursor: pointer;
-        }
 
         #code-editor textarea {
             width: 100%;
@@ -162,11 +217,6 @@ svg {
             flex-grow: 1;
         }
 
-        .resizer {
-            width: 5px;
-            cursor: ew-resize;
-            background-color: #333;
-        }
 
 
 .grid-line {
@@ -306,24 +356,33 @@ svg {
         </div>
     </div>
 
- 
-    <div class="flex-container">
-        <div id="code-editor">
-            <div class="title-bar" id="codeEditorTitleBar">
-                <span>Code Editor</span>
-                <button onclick="toggleEditor()">_</button>
+    <!-- Code editor, test editor, video viewer -->
+    
+    <div class="title-bar" id="title-bar">
+        <button onclick="toggleSection('code-editor')">🖥️</button>
+        <button onclick="toggleSection('test-editor')">📝</button>
+        <button onclick="toggleSection('video-container')">📹</button>
+    </div>
+        
+    <div class="flex-container-vertical" id="split-container">
+        <div id="horizontal-splitter" class="flex-container">
+            <div id="code-editor" class="section">
+                <textarea id="nodeCode"></textarea>
             </div>
-            <textarea id="nodeCode"></textarea>
-        </div>
-        <div class="resizer" onmousedown="initResize(event)"></div>
-        <div id="video-container">
-            <div class="title-bar" id="videoTitleBar">
-                <span>YouTube Video</span>
-                <button onclick="toggleVideo()">_</button>
+            <div id="test-editor" class="section">
+                <textarea id="nodeTests"></textarea>
             </div>
-            <iframe id="youtubeVideo" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+            <div id="video-container" class="section">
+                <iframe id="youtubeVideo" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+            </div>
         </div>
     </div>
+        
+      
+       
+     
+      
+    
 
     <div id="spotlightSearch">
         <div id="searchTitle"></div>
@@ -333,57 +392,76 @@ svg {
     
     
     <script>
-        function toggleEditor() {
-            const editor = document.getElementById('code-editor');
-            if (editor.style.display === 'none' || editor.style.display === '') {
-                editor.style.display = 'flex';
-            } else {
-                editor.style.display = 'none';
-            }
+let splitInstance;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSplit();
+});
+
+function initializeSplit() {
+    const sections = Array.from(document.querySelectorAll('.section')).filter(section => section.style.display !== 'none');
+    if (splitInstance) {
+        splitInstance.destroy();
+    }
+    if (sections.length > 0) {
+        splitInstance = Split(sections.map(section => `#${section.id}`), {
+            sizes: Array(sections.length).fill(100 / sections.length),
+            minSize: 100,
+            gutterSize: 5,
+            cursor: 'col-resize',
+        });
+    }
+}
+
+      last_num = -1
+      function toggleSection(id, action = 'toggle') {
+    const sections = Array.from(document.querySelectorAll('.section')).filter(section => section.style.display !== 'none');
+	  console.log(sections.length);
+	  
+    if (sections.length === 1 && last_num == 2) {
+        document.getElementById("split-container").style.display = "none";
+    } else {
+        document.getElementById("split-container").style.display = "flex";
+    }
+
+    const section = document.getElementById(id);
+    const button = document.querySelector(`button[onclick="toggleSection('${id}')"]`);
+
+    if (action === 'show') {
+        section.style.display = 'flex';
+        button.classList.remove('hidden');
+    } else if (action === 'hide') {
+        section.style.display = 'none';
+        button.classList.add('hidden');
+    } else {  // Toggle behavior
+        if (section.style.display === 'none') {
+            section.style.display = 'flex';
+            button.classList.remove('hidden');
+        } else {
+            section.style.display = 'none';
+            button.classList.add('hidden');
         }
+    }
+	  initializeSplit();
+	  last_num = sections.length
+}
 
-        function toggleVideo() {
-            const video = document.getElementById('video-container');
-            if (video.style.display === 'none' || video.style.display === '') {
-                video.style.display = 'flex';
-            } else {
-                video.style.display = 'none';
-            }
-        }
+      
+            
 
-        let startX, startWidth, startFlexGrow;
+			
+		
+    </script>
 
-        function initResize(e) {
-            startX = e.clientX;
-            const videoContainer = document.getElementById('video-container');
-            startWidth = videoContainer.offsetWidth;
-            startFlexGrow = parseFloat(window.getComputedStyle(videoContainer).flexGrow);
-            document.documentElement.addEventListener('mousemove', doResize, false);
-            document.documentElement.addEventListener('mouseup', stopResize, false);
-        }
+    <script>
 
-        function doResize(e) {
-            const videoContainer = document.getElementById('video-container');
-            const codeEditor = document.getElementById('code-editor');
-            const deltaX = e.clientX - startX;
-
-            const newFlexGrowVideo = startFlexGrow + deltaX / startWidth;
-            const newFlexGrowEditor = 2 - newFlexGrowVideo;
-
-            videoContainer.style.flexGrow = newFlexGrowVideo;
-            codeEditor.style.flexGrow = newFlexGrowEditor;
-        }
-
-        function stopResize(e) {
-            document.documentElement.removeEventListener('mousemove', doResize, false);
-            document.documentElement.removeEventListener('mouseup', stopResize, false);
-        }
-
+	
 
         function setCodeEditorTitle(title) {
-            document.getElementById('codeEditorTitleBar').textContent = title;
+            //document.getElementById('title-bar').textContent = title;
         }
 
+      /*
         function setVideoTitle(title) {
             document.getElementById('videoTitleBar').textContent = title;
         }
@@ -399,7 +477,7 @@ svg {
 	    const video = document.getElementById('video-container');
             video.style.display = 'flex';
 
-        }
+        }*/
 
 function getYouTubeThumbnail(url) {
     const videoId = getYouTubeVideoId(url);
@@ -2303,11 +2381,11 @@ async function selectNode(event,d) {
 
     
     if (isYouTubeLink(d.url) === true) {
-	setVideoUrl(d.url);
-	setVideoTitle(d.label);
+	toggleSection('video-container', action="flex")
+	//setVideoUrl(d.url);
+	//setVideoTitle(d.label);
     } else {
-	const video = document.getElementById('video-container');
-	video.style.display = 'none';
+	toggleSection('video-container', action="none")
     }
 
     setCodeEditorTitle(d.label);
