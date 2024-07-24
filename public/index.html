@@ -215,7 +215,38 @@ iframe {
             height: 100%;
             border: none;
             flex-grow: 1;
+}
+
+
+     table {
+            width: 100%;
+            border-collapse: collapse;
         }
+        th, td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+        }
+        td[contenteditable="true"] {
+            background-color: #222;
+}
+
+        pre {
+            background-color: #333;
+            padding: 10px;
+            overflow: auto;
+        }
+        .delete-btn {
+            cursor: pointer;
+            color: red;
+            font-size: 1.2em;
+        }
+
+
+
 
 
 
@@ -370,7 +401,23 @@ iframe {
                 <textarea id="nodeCode"></textarea>
             </div>
             <div id="test-editor" class="section">
-                <textarea id="nodeTests"></textarea>
+              <!--<textarea id="nodeTests"></textarea>-->
+	        <table id="nodeTestsTable">
+                    <thead>
+                        <tr>
+                            <th>Input</th>
+                            <th>Output</th>
+                            <td class="run-tests" onclick="runTests(this)">🏃‍♀️</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td contenteditable="true"></td>
+                            <td contenteditable="true"></td>
+                            <td class="delete-btn" onclick="deleteRow(this)">❌</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             <div id="video-container" class="section">
                 <iframe id="youtubeVideo" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
@@ -390,7 +437,136 @@ iframe {
         <div id="results"></div>
     </div>
     
+    <!-- managing the tests table -->
+
+    <script>
+
+            const table = document.getElementById('nodeTestsTable').getElementsByTagName('tbody')[0];
+
+      function runTests(input) {
+	  const code = `async function test(input) { \n ${document.getElementById('nodeCode').value} \n }`
+	  const tests = JSON.parse(convertTableToJSONString())
+	  console.log("code", code, "tests", tests)
+	  evaluateJsonEntries(tests, code);
+      }
+
+
+async function evaluateJsonEntries(data, jsFunctionString) {
+  // Convert the function string to an actual function
+  const jsFunction = eval(`(${jsFunctionString})`);
+
+  for (const [index, entry] of data.entries()) {
+    if (entry.Input && entry.Output) {
+      try {
+        // Isolate the context to avoid redeclaration issues
+        const input = eval(entry.Input.replace("input = ", ""));
+
+        // Call the provided async function with the input and get the output
+        const output = await jsFunction(input);
+
+        // Evaluate the output condition
+        const result = eval(entry.Output);
+
+        console.log(`Entry ${index + 1}:`, result ? 'Passed' : 'Failed');
+      } catch (error) {
+        console.error(`Entry ${index + 1}: Error -`, error);
+      }
+    } else {
+      console.log(`Entry ${index + 1}: Skipped (blank input/output)`);
+    }
+  }
+	    }
+	    
+
+      
+      
+            
+      function convertTableToJSONString() {
+	  console.log("CONVERTING")
+                const rows = table.getElementsByTagName('tr');
+                const data = [];
+                for (let i = 0; i < rows.length; i++) {
+                    const cells = rows[i].getElementsByTagName('td');
+                    const rowData = {};
+                    rowData['Input'] = cells[0].innerText;
+                    rowData['Output'] = cells[1].innerText;
+                    data.push(rowData);
+                }
+		return JSON.stringify(data, null, 2);
+            }
+
+            table.addEventListener('input', function(event) {
+                const cell = event.target;
+                const row = cell.parentElement;
+                const lastRow = table.rows[table.rows.length - 1];
+                if (row === lastRow && cell === lastRow.cells[lastRow.cells.length - 2]) {
+                    const newRow = table.insertRow();
+                    for (let i = 0; i < lastRow.cells.length - 1; i++) {
+                        const newCell = newRow.insertCell();
+                        newCell.contentEditable = "true";
+                    }
+                    const deleteCell = newRow.insertCell();
+                    deleteCell.className = "delete-btn";
+                    deleteCell.innerHTML = "❌";
+                    deleteCell.onclick = function() { deleteRow(deleteCell); };
+                }
+                convertTableToJSONString();
+            });
+
+            window.deleteRow = function(button) {
+                const row = button.parentElement;
+                table.deleteRow(row.rowIndex - 1); // Adjust for zero-indexed
+                convertTableToJSONString();
+            };
+
+	    function loadFromJSON(json) {
+    // Check if json is null or undefined and set it to an empty array
+    if (json === null || json === undefined) {
+        json = '[{"Input":"", "Output":""}]';
+    }
     
+    console.log("JSONNN", json);
+    
+    // Parse the JSON string safely
+    let data;
+    try {
+        data = JSON.parse(json);
+    } catch (e) {
+        console.error("Invalid JSON:", e);
+        return; // Exit the function if JSON is invalid
+    }
+    
+    // Clear the existing table content
+    table.innerHTML = '';
+    
+    // Populate the table with new data
+    data.forEach(rowData => {
+        const row = table.insertRow();
+        for (const key in rowData) {
+            if (rowData.hasOwnProperty(key)) {
+                const cell = row.insertCell();
+                cell.contentEditable = "true";
+                cell.innerText = rowData[key];
+            }
+        }
+        const deleteCell = row.insertCell();
+        deleteCell.className = "delete-btn";
+        deleteCell.innerHTML = "❌";
+        deleteCell.onclick = function() { deleteRow(deleteCell); };
+    });
+    // Convert table to JSON string if needed
+    // convertTableToJSONString();
+}
+
+	    
+
+            // Initial conversion to JSON on page load
+            //convertTableToJSON();
+      
+    </script>
+    
+              
+    <!-- split pane on the bottom -->
     <script>
 let splitInstance;
 
@@ -1177,7 +1353,7 @@ async function updateInheritedNode(id, instance, x, y, width, height) {
 }
 
 
-async function updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, background, code) {
+      async function updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, background, code, tests) {
     const session = driver.session();
     
     try {
@@ -1203,7 +1379,7 @@ async function updateNodeProperties(id, label, url, imageUrl, x, y, width, heigh
         widths[instance] = width;
         heights[instance] = height;
 
-
+	console.log("SAVING TESTS", tests)
 
         await session.run(
             `MATCH (n {id: $id})
@@ -1216,7 +1392,8 @@ async function updateNodeProperties(id, label, url, imageUrl, x, y, width, heigh
                  n.heights = $heights,
                  n.type = $type, 
                  n.background = $background,
-                 n.code = $code`,
+                 n.code = $code,
+	         n.tests = $tests`,
             { 
                 id, 
                 label, 
@@ -1228,7 +1405,8 @@ async function updateNodeProperties(id, label, url, imageUrl, x, y, width, heigh
                 heights,
 		type,
                 background, 
-                code 
+                code,
+		tests
             }
         );
     } finally {
@@ -2404,6 +2582,7 @@ async function selectNode(event,d) {
 	setReadOnlyFields(true);	
     } else {
 	document.getElementById("nodeCode").value = d.code || "";
+	loadFromJSON(d.tests)
 	setReadOnlyFields(false);
 
     }
@@ -2968,7 +3147,7 @@ drawGrid(d3.zoomIdentity);
 drawNodesAndLinks(d3.zoomIdentity);
 
 // Auto-save for inspector and code editor
-const inputs = document.querySelectorAll("#inspector input, #code-editor textarea");
+      const inputs = document.querySelectorAll("#inspector input, #code-editor textarea, #test-editor table");
 inputs.forEach(input => {
     input.addEventListener("input", async () => {
 	console.log("input");
@@ -2984,12 +3163,13 @@ inputs.forEach(input => {
         const background = document.getElementById("nodeBackground").value;
 	const type = document.getElementById("nodeType").value;
         const code = document.getElementById("nodeCode").value;
+	const tests = convertTableToJSONString();
 	
 	console.log("UPDATING NODE", document.getElementById("nodeId"));
 	if (type === "inherited") {
 	    await updateInheritedNode(id, instance, x, y, width, height);
 	} else {
-	    await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, background, code);
+	    await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, background, code, tests);
 	}
 
         // Update the node in the visualization
