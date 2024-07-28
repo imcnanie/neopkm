@@ -36,7 +36,7 @@ svg {
     top: 10px;
     right: 10px;
     width: 250px;
-    max-height: 80vh; /* Set max-height to the height of the viewport */
+    max-height: 50vh; /* Set max-height to the height of the viewport */
     background: #1e1e1e;
     border: 1px solid #333;
     padding: 15px;
@@ -363,7 +363,14 @@ iframe {
             Type:
             <input type="text" id="nodeType">
         </label>
-    
+
+        <label>
+            Connection String:
+            <input type="text" id="connectionString">
+    </label>
+    <button onClick=runCommand()>🚀</button>
+
+
         <label hidden>
             <!--Background:-->
             <input type="text" id="nodeBackground" hidden>
@@ -390,16 +397,24 @@ iframe {
     <!-- Code editor, test editor, video viewer -->
     
     <div class="title-bar" id="title-bar">
-        <button onclick="toggleSection('code-editor')">🖥️</button>
-        <button onclick="toggleSection('test-editor')">📝</button>
-        <button onclick="toggleSection('video-container')">📹</button>
+      <button onclick="toggleSection('code-editor')">source</button>
+      <button onclick="toggleSection('flake-editor')">flake</button>
+    <button onclick="toggleSection('test-editor')">tests</button>
+    <button onclick="toggleSection('console-container')">console</button>
+        <button onclick="toggleSection('video-container')">video</button>
     </div>
         
     <div class="flex-container-vertical" id="split-container">
-        <div id="horizontal-splitter" class="flex-container">
-            <div id="code-editor" class="section">
-                <textarea id="nodeCode"></textarea>
+      <div id="horizontal-splitter" class="flex-container">
+	<div id="code-editor" class="section">
+          <textarea id="nodeCode"></textarea>
+	</div>
+	
+	<div id="flake-editor" class="section">
+                <textarea id="nodeFlake"></textarea>
             </div>
+
+
             <div id="test-editor" class="section">
               <!--<textarea id="nodeTests"></textarea>-->
 	        <table id="nodeTestsTable">
@@ -418,7 +433,12 @@ iframe {
                         </tr>
                     </tbody>
                 </table>
+    </div>
+
+            <div id="console-container" class="section">
+    <iframe id="consoleContainer" src="" allowfullscreen></iframe>
             </div>
+
             <div id="video-container" class="section">
                 <iframe id="youtubeVideo" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
             </div>
@@ -591,36 +611,36 @@ function initializeSplit() {
 
       last_num = -1
       function toggleSection(id, action = 'toggle') {
-    const sections = Array.from(document.querySelectorAll('.section')).filter(section => section.style.display !== 'none');
+	  const sections = Array.from(document.querySelectorAll('.section')).filter(section => section.style.display !== 'none');
 	  console.log(sections.length);
 	  
-    if (sections.length === 1 && last_num == 2) {
-        document.getElementById("split-container").style.display = "none";
-    } else {
-        document.getElementById("split-container").style.display = "flex";
-    }
-
-    const section = document.getElementById(id);
-    const button = document.querySelector(`button[onclick="toggleSection('${id}')"]`);
-
-    if (action === 'show') {
-        section.style.display = 'flex';
-        button.classList.remove('hidden');
-    } else if (action === 'hide') {
-        section.style.display = 'none';
-        button.classList.add('hidden');
-    } else {  // Toggle behavior
-        if (section.style.display === 'none') {
-            section.style.display = 'flex';
-            button.classList.remove('hidden');
-        } else {
-            section.style.display = 'none';
-            button.classList.add('hidden');
-        }
-    }
+	  if (sections.length === 1 && last_num == 2) {
+              document.getElementById("split-container").style.display = "none";
+	  } else {
+              document.getElementById("split-container").style.display = "flex";
+	  }
+	  
+	  const section = document.getElementById(id);
+	  const button = document.querySelector(`button[onclick="toggleSection('${id}')"]`);
+	  
+	  if (action === 'show') {
+              section.style.display = 'flex';
+              button.classList.remove('hidden');
+	  } else if (action === 'hide') {
+              section.style.display = 'none';
+              button.classList.add('hidden');
+	  } else {  // Toggle behavior
+              if (section.style.display === 'none') {
+		  section.style.display = 'flex';
+		  button.classList.remove('hidden');
+              } else {
+		  section.style.display = 'none';
+		  button.classList.add('hidden');
+              }
+	  }
 	  initializeSplit();
 	  last_num = sections.length
-}
+      }
 
       
             
@@ -1353,7 +1373,7 @@ async function updateInheritedNode(id, instance, x, y, width, height) {
 }
 
 
-      async function updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, background, code, tests) {
+async function updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, connectionString, background, code, flake, tests) {
     const session = driver.session();
     
     try {
@@ -1380,6 +1400,8 @@ async function updateInheritedNode(id, instance, x, y, width, height) {
         heights[instance] = height;
 
 	console.log("SAVING TESTS", tests)
+	console.log("SAVING FLAKE", flake)
+	console.log("SAVING CONNECTIONSTRING", connectionString)
 
         await session.run(
             `MATCH (n {id: $id})
@@ -1390,9 +1412,11 @@ async function updateInheritedNode(id, instance, x, y, width, height) {
                  n.y_positions = $y_positions, 
                  n.widths = $widths, 
                  n.heights = $heights,
-                 n.type = $type, 
+                 n.type = $type,
+                 n.connectionString = $connectionString, 
                  n.background = $background,
                  n.code = $code,
+	         n.flake = $flake,
 	         n.tests = $tests`,
             { 
                 id, 
@@ -1404,8 +1428,10 @@ async function updateInheritedNode(id, instance, x, y, width, height) {
                 widths, 
                 heights,
 		type,
+		connectionString,
                 background, 
                 code,
+                flake,
 		tests
             }
         );
@@ -2519,8 +2545,90 @@ async function connectFromNode(nodeId) {
     }
 }
 
+async function writeFileToRemote(connectionString, remotePath, fileContent) {
+  const [usernamePart, hostPart] = connectionString.split('@');
+  const [ip, port = '22'] = hostPart.split(':'); // Default to port 22 if not provided
+  const username = usernamePart;
+
+  const url = '/write-file';
+
+  // Prompt the user for the password each time
+  const password = "none" //window.prompt("Please enter your password:");
+  if (!password) {
+    console.error('Password is required to proceed.');
+    return;
+  }
+
+  const data = {
+    ip: ip,
+    port: parseInt(port, 10), // Ensure the port is a number
+    username: username,
+    password: password,
+    remotePath: remotePath,
+    fileContent: fileContent
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('File written successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('Error writing file to remote server:', error);
+    throw error;
+  }
+}
+
+
+function runCommand() {
+    const connString = document.getElementById("connectionString").value;
+    const nodeLabel = document.getElementById("nodeLabel").value;
+    const nodeCode = document.getElementById("nodeCode").value;
+    const nodeFlake = document.getElementById("nodeFlake").value;
+    console.log("DOIN IT")
+    //runRemoteCommand(connString, "cd ~/neopkm_nodes/ && ls", )
+    /*writeFileToRemote(connString, `~/neopkm/${nodeLabel}/flake.nix`, nodeFlake)
+	.then(result => console.log(result))
+	.catch(error => console.error(error));
+
+    writeFileToRemote(connString, `~/neopkm/${nodeLabel}/${nodeLabel}`, nodeCode)
+	.then(result => console.log(result))
+	.catch(error => console.error(error));
+
+    writeFileToRemote(connString, `~/neopkm/${nodeLabel}/tests.json`, convertTableToJSONString())
+	.then(result => console.log(result))
+	.catch(error => console.error(error));*/
+
+    Promise.all([
+	writeFileToRemote(connString, `~/neopkm/${nodeLabel}/flake.nix`, nodeFlake),
+	writeFileToRemote(connString, `~/neopkm/${nodeLabel}/${nodeLabel}`, nodeCode),
+	writeFileToRemote(connString, `~/neopkm/${nodeLabel}/tests.json`, convertTableToJSONString())
+    ])
+	.then(results => {
+	    console.log(results);
+	    // Set the iframe URL after all promises are resolved
+	    document.getElementById('consoleContainer').src = `http://localhost:8080/?arg=nix%20develop%20/home/printer/neopkm/${nodeLabel}`;
+	})
+	.catch(error => {
+	    console.error(error);
+	});
+    
+
+}
+
 // When clicking on a node that's inherited, it should actually get THE CODE of the node it's inherited from
-async function getInheritedCode(nodeId) {
+/*async function getInheritedCode(nodeId) {
     const session = driver.session();
     const query = `
         MATCH (child {id: $nodeId})-[:INHERITED_FROM]->(parent)
@@ -2533,6 +2641,48 @@ async function getInheritedCode(nodeId) {
     return result.records[0].get('code');
 }
 
+async function getInheritedFlake(nodeId) {
+    const session = driver.session();
+    const query = `
+        MATCH (child {id: $nodeId})-[:INHERITED_FROM]->(parent)
+        RETURN parent.flake AS flake
+    `;
+    const result = await session.run(query, { nodeId });
+    if (result.records.length === 0) {
+        return null; // No parent or no flake property found
+    }
+    return result.records[0].get('flake');
+}
+*/
+
+async function getInheritedProperties(nodeId) {
+    const session = driver.session();
+    const query = `
+        MATCH (child {id: $nodeId})-[:INHERITED_FROM]->(parent)
+        RETURN properties(parent) AS properties
+    `;
+    const result = await session.run(query, { nodeId });
+    if (result.records.length === 0) {
+        return null; // No parent found
+    }
+    return result.records[0].get('properties');
+}
+
+function setTableEditable(isEditable) {
+    const table = document.getElementById('nodeTestsTable').getElementsByTagName('tbody')[0];
+    const cells = table.getElementsByTagName('td');
+    const deleteButtons = table.getElementsByClassName('delete-btn');
+
+    for (let cell of cells) {
+        cell.setAttribute('contenteditable', isEditable);
+    }
+
+    for (let deleteButton of deleteButtons) {
+        deleteButton.style.display = isEditable ? 'table-cell' : 'none';
+    }
+}
+
+      
 function setReadOnlyFields(isReadOnly) {
     document.getElementById("nodeId").readOnly = isReadOnly;
     document.getElementById("nodeLabel").readOnly = isReadOnly;
@@ -2541,9 +2691,20 @@ function setReadOnlyFields(isReadOnly) {
     document.getElementById("nodeInstance").readOnly = isReadOnly;
     document.getElementById("nodeBackground").readOnly = isReadOnly;
     document.getElementById("nodeType").readOnly = isReadOnly;
+    document.getElementById("connectionString").readOnly = isReadOnly;
     document.getElementById("nodeCode").readOnly = isReadOnly;
+    document.getElementById("nodeFlake").readOnly = isReadOnly;
+
+    setTableEditable(!isReadOnly);
 }
 
+      function hasCodeExtension(label) {
+	  const validExtensions = [".nix", ".py", ".sh", ".js"];
+	  return validExtensions.some(ext => label.includes(ext));
+      }
+
+      
+      
 async function selectNode(event,d) {
     
     const inspector = document.getElementById("inspector");
@@ -2556,14 +2717,23 @@ async function selectNode(event,d) {
     document.getElementById("nodeLabel").value = d.label;
     document.getElementById("nodeUrl").value = d.url;
     document.getElementById("nodeImageUrl").value = d.imageUrl;
-
+    
+    if (hasCodeExtension(d.label) === true) {
+	toggleSection('flake-editor', action="show")
+	toggleSection('test-editor', action="show")
+	toggleSection('console-container', action="show")
+    } else {
+	toggleSection('flake-editor', action="hide")
+	toggleSection('test-editor', action="hide")
+	toggleSection('console-container', action="hide")
+    }
     
     if (isYouTubeLink(d.url) === true) {
-	toggleSection('video-container', action="flex")
+	toggleSection('video-container', action="show")
 	//setVideoUrl(d.url);
 	//setVideoTitle(d.label);
     } else {
-	toggleSection('video-container', action="none")
+	toggleSection('video-container', action="hide")
     }
 
     setCodeEditorTitle(d.label);
@@ -2571,17 +2741,35 @@ async function selectNode(event,d) {
     document.getElementById("nodeY").value = d.y;
     document.getElementById("nodeWidth").value = d.width;
     document.getElementById("nodeHeight").value = d.height;
-    document.getElementById("nodeInstance").value = d.instance;
-    document.getElementById("nodeBackground").value = d.background;
+    document.getElementById("nodeInstance").value = d.instance; // TODO REMOVE
+    document.getElementById("nodeBackground").value = d.background; // TODO REMOVE
     document.getElementById("nodeType").value = d.type;
+    document.getElementById("connectionString").value = d.connectionString;
+
+    // TODO modify this to inherit EVERYTHING at once
     if (d.type === "inherited") {
-	document.getElementById("nodeCode").value = await getInheritedCode(d.id) || "";
+
+	inheritedProperties = await getInheritedProperties(d.id);
+	
+	document.getElementById("nodeLabel").value = inheritedProperties.label || "";
+	document.getElementById("nodeImageUrl").value = inheritedProperties.imageUrl || "";
+	document.getElementById("nodeCode").value = inheritedProperties.code || "";
+	document.getElementById("nodeFlake").value = inheritedProperties.flake || "";
+	//document.getElementById("nodeTests").value = inheritedProperties.tests || "";
+	loadFromJSON(inheritedProperties.tests)
+	document.getElementById("connectionString").value = inheritedProperties.connectionString || "";
+
+	//document.getElementById("nodeFlake").value = await getInheritedFlake(d.id) || "";
+	//document.getElementById("connectionString").value = await getInheritedConnectionString(d.id) || "";
 	setReadOnlyFields(true);
     } else if (d.type === "grouping_box"){
 	document.getElementById("nodeCode").value = d.code || "";
-	setReadOnlyFields(true);	
+	document.getElementById("nodeFlake").value = d.flake || "";
+
+	setReadOnlyFields(false);	
     } else {
 	document.getElementById("nodeCode").value = d.code || "";
+	document.getElementById("nodeFlake").value = d.flake || "";
 	loadFromJSON(d.tests)
 	setReadOnlyFields(false);
 
@@ -3147,7 +3335,7 @@ drawGrid(d3.zoomIdentity);
 drawNodesAndLinks(d3.zoomIdentity);
 
 // Auto-save for inspector and code editor
-      const inputs = document.querySelectorAll("#inspector input, #code-editor textarea, #test-editor table");
+      const inputs = document.querySelectorAll("#inspector input, #code-editor textarea, #flake-editor textarea, #test-editor table");
 inputs.forEach(input => {
     input.addEventListener("input", async () => {
 	console.log("input");
@@ -3162,14 +3350,16 @@ inputs.forEach(input => {
 	const instance = parseFloat(document.getElementById("nodeInstance").value);
         const background = document.getElementById("nodeBackground").value;
 	const type = document.getElementById("nodeType").value;
+	const connectionString = document.getElementById("connectionString").value;
         const code = document.getElementById("nodeCode").value;
+	const flake = document.getElementById("nodeFlake").value;
 	const tests = convertTableToJSONString();
 	
 	console.log("UPDATING NODE", document.getElementById("nodeId"));
 	if (type === "inherited") {
 	    await updateInheritedNode(id, instance, x, y, width, height);
 	} else {
-	    await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, background, code, tests);
+	    await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, connectionString, background, code, flake, tests);
 	}
 
         // Update the node in the visualization
