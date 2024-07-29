@@ -31,12 +31,16 @@ svg {
     border-bottom: 1px solid #333;
 }
 
+
+
+
+
 #inspector {
     position: absolute;
     top: 10px;
     right: 10px;
     width: 250px;
-    max-height: 50vh; /* Set max-height to the height of the viewport */
+    /*max-height: 50vh;*/ /* Set max-height to the height of the viewport */
     background: #1e1e1e;
     border: 1px solid #333;
     padding: 15px;
@@ -45,9 +49,6 @@ svg {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     overflow: auto; /* Enable scrolling */
 }
-
-
-
 #inspector h3 {
     margin-top: 0;
     font-size: 18px;
@@ -56,7 +57,7 @@ svg {
 
 #inspector label {
     display: block;
-    margin-top: 10px;
+    margin-bottom: 10px;
     font-size: 14px;
     color: #ccc;
 }
@@ -70,6 +71,7 @@ svg {
     color: #e0e0e0;
     border-radius: 4px;
 }
+
 
 #connections {
     margin-top: 10px;
@@ -133,6 +135,19 @@ svg {
     user-select: none;
 }
 
+ .title-bar {
+            background-color: #333;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            cursor: ns-resize;
+            position: sticky;
+            top: 0;
+            width: 100%;
+            z-index: 10;
+        }
 .title-bar button {
     background: none;
     border: none;
@@ -147,6 +162,15 @@ svg {
 .title-bar button.hidden {
     opacity: 0.5;
 }
+
+ #split-container {
+            background-color: #f0f0f0;
+            position: absolute;
+            top: 50px; /* Initial top position */
+            bottom: 0;
+            width: 100%;
+            transition: top 0.2s;
+        }
 
 .flex-container-vertical {
     display: flex;
@@ -320,61 +344,58 @@ iframe {
         </marker>
     </defs>
     </svg>
+
     <div id="inspector">
-        <h3>Node Inspector</h3>
-        <input type="hidden" id="nodeId">
-        <label>
-            Label:
-            <input type="text" id="nodeLabel">
-    </label>
-    <label>
-            Link:
-            <input type="text" id="nodeUrl">
-    </label>
-        <label>
-    Image:
-            <input type="text" id="nodeImageUrl">
-        </label> 
-
-        <label>
-            X:
-            <input type="number" id="nodeX">
-        </label>
-        <label>
-            Y:
-            <input type="number" id="nodeY">
-    </label>
+    <h3>Node Inspector</h3>
     
-        <label>
-            Width:
-            <input type="number" id="nodeWidth">
-    </label>
-    
-        <label>
-            Height:
-            <input type="number" id="nodeHeight">
-    </label>
-    
-        <label hidden>
-            <!--Instance:-->
-            <input type="number" id="nodeInstance" hidden>
-    </label>
-        <label>
-            Type:
-            <input type="text" id="nodeType">
-        </label>
+    <input type="hidden" id="nodeId">
 
-        <label>
-            Connection String:
-            <input type="text" id="connectionString">
-    </label>
-    <button onClick=runCommand()>🚀</button>
+   <div style="display: flex; align-items: center; margin-bottom: 5px;">
+        <label style="width: 100px;">Name:</label>
+        <input type="text" id="nodeLabel" style="flex: 1;">
+    </div>
+    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+        <label style="width: 100px;">Link:</label>
+        <input type="text" id="nodeUrl" style="flex: 1;">
+    </div>
+    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+        <label style="width: 100px;">Image:</label>
+        <input type="text" id="nodeImageUrl" style="flex: 1;">
+    </div> 
+    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
+        <label hidden style="width: 100px;">X:</label>
+        <input type="number" id="nodeX" hidden style="flex: 1;">
+    </div>
+    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
+        <label hidden style="width: 100px;">Y:</label>
+        <input type="number" id="nodeY" hidden style="flex: 1;">
+    </div>
+    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
+        <label hidden style="width: 100px;">Width:</label>
+        <input type="number" id="nodeWidth" hidden style="flex: 1;">
+    </div>
+    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
+        <label hidden style="width: 100px;">Height:</label>
+        <input type="number" id="nodeHeight" hidden style="flex: 1;">
+    </div>
+    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
+        <label hidden style="width: 100px;">Instance:</label>
+        <input type="number" id="nodeInstance" hidden style="flex: 1;">
+    </div>
+    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+        <label style="width: 100px;">Type:</label>
+        <input type="text" id="nodeType" style="flex: 1;">
+    </div>
+    <div style="display: flex; align-items: center; margin-bottom: 5px;">
+        <label style="width: 100px;">SSH:</label>
+        <input type="text" id="connectionString" style="flex: 1;">
+    </div>
+    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
+        <label hidden style="width: 100px;">Background:</label>
+        <input type="text" id="nodeBackground" hidden style="flex: 1;">
+    </div>
+        
 
-
-        <label hidden>
-            <!--Background:-->
-            <input type="text" id="nodeBackground" hidden>
-        </label>
         <div id="connections">
           <h4>
 	    Connections To
@@ -395,16 +416,25 @@ iframe {
     </div>
 
     <!-- Code editor, test editor, video viewer -->
-    
+    <div>
+        <div class="flex-container-vertical-old" id="split-container" style="display:flex">            
     <div class="title-bar" id="title-bar">
-      <button onclick="toggleSection('code-editor')">source</button>
-      <button onclick="toggleSection('flake-editor')">flake</button>
-    <button onclick="toggleSection('test-editor')">tests</button>
-    <button onclick="toggleSection('console-container')">console</button>
-        <button onclick="toggleSection('video-container')">video</button>
+    <button onclick="toggleSection('code-editor')" class="hidden">source</button>
+    <button onclick="toggleSection('flake-editor')" class="hidden">flake</button>
+    <button onclick="toggleSection('test-editor')" class="hidden">tests</button>
+    <button onclick="toggleSection('console-container')" class="hidden">console</button>
+    <button onClick=runCommand()>🚀</button>
+    <button onclick="toggleSection('video-container')" class="hidden">video</button>
+    <button onclick="toggleSplitContainer()" id="toggleButton" style="background-color: #333; border: none; color: #ccc; width: 30px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 15px; transform: scaleX(1.1) scaleY(0.7) translateY(0.3em)">
+    ^
+</button>
+
+    
+    
+    
     </div>
-        
-    <div class="flex-container-vertical" id="split-container">
+
+
       <div id="horizontal-splitter" class="flex-container">
 	<div id="code-editor" class="section">
           <textarea id="nodeCode"></textarea>
@@ -440,12 +470,12 @@ iframe {
             </div>
 
             <div id="video-container" class="section">
-                <iframe id="youtubeVideo" src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
+                <iframe id="youtubeVideo" src="" allowfullscreen></iframe>
             </div>
         </div>
     </div>
         
-      
+</div>      
        
      
       
@@ -588,6 +618,47 @@ async function evaluateJsonEntries(data, jsFunctionString) {
               
     <!-- split pane on the bottom -->
     <script>
+            const titleBar = document.getElementById('title-bar');
+        const splitContainer = document.getElementById('split-container');
+        let isDraggingTitleBar = false;
+
+        titleBar.addEventListener('mousedown', function(e) {
+            isDraggingTitleBar = true;
+            document.body.style.cursor = 'ns-resize';
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDraggingTitleBar) return;
+            let newTop = e.clientY;
+            if (newTop < 0) newTop = 0;
+            if (newTop > window.innerHeight) newTop = window.innerHeight;
+            splitContainer.style.top = `${newTop}px`;
+        });
+
+        document.addEventListener('mouseup', function() {
+            isDraggingTitleBar = false;
+            document.body.style.cursor = 'default';
+        });
+
+
+
+
+function toggleSplitContainer() {
+    var splitContainer = document.getElementById("split-container");
+    var toggleButton = document.getElementById("toggleButton");
+    
+    if (splitContainer.style.display === "none") {
+        splitContainer.style.display = "flex";
+        toggleButton.innerHTML = "v";  // minus symbol
+	toggleButton.style.transform = "scaleX(1.1) scaleY(0.6) translateY(-0.0em)";
+    } else {
+        splitContainer.style.display = "none";
+        toggleButton.innerHTML = "^";  // caret symbol
+	toggleButton.style.transform = "scaleX(1.1) scaleY(0.7) translateY(0.3em)";
+    }
+}
+
+
 let splitInstance;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -613,12 +684,13 @@ function initializeSplit() {
       function toggleSection(id, action = 'toggle') {
 	  const sections = Array.from(document.querySelectorAll('.section')).filter(section => section.style.display !== 'none');
 	  console.log(sections.length);
-	  
+
+	  /* automatically closing split container
 	  if (sections.length === 1 && last_num == 2) {
               document.getElementById("split-container").style.display = "none";
 	  } else {
               document.getElementById("split-container").style.display = "flex";
-	  }
+	  }*/
 	  
 	  const section = document.getElementById(id);
 	  const button = document.querySelector(`button[onclick="toggleSection('${id}')"]`);
@@ -661,7 +733,7 @@ function initializeSplit() {
         function setVideoTitle(title) {
             document.getElementById('videoTitleBar').textContent = title;
         }
-
+*/
         function setVideoUrl(url) {
             const videoId = getYouTubeVideoId(url);
             if (videoId) {
@@ -673,7 +745,7 @@ function initializeSplit() {
 	    const video = document.getElementById('video-container');
             video.style.display = 'flex';
 
-        }*/
+        }
 
 function getYouTubeThumbnail(url) {
     const videoId = getYouTubeVideoId(url);
@@ -2730,7 +2802,7 @@ async function selectNode(event,d) {
     
     if (isYouTubeLink(d.url) === true) {
 	toggleSection('video-container', action="show")
-	//setVideoUrl(d.url);
+	setVideoUrl(d.url);
 	//setVideoTitle(d.label);
     } else {
 	toggleSection('video-container', action="hide")
