@@ -7,77 +7,66 @@
     <script src="/d3.v6.min.js"></script>
     <script src="/neo4j-driver"></script>
     <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
-	
     <style>
-
-html, body {
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    background-color: #121212;
-    color: #e0e0e0;
-    font-family: 'Arial', sans-serif;
-    display: flex;
-    
-    flex-direction: column;
-
-}
-
-svg {
-    width: 100%;
-    height: 100%;
-    background-color: #1e1e1e;
-    cursor: grab;
-    border-bottom: 1px solid #333;
-}
-
-
-
-
-
-#inspector {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 250px;
-    /*max-height: 50vh;*/ /* Set max-height to the height of the viewport */
-    background: #1e1e1e;
-    border: 1px solid #333;
-    padding: 15px;
-    display: none;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    overflow: auto; /* Enable scrolling */
-}
-#inspector h3 {
-    margin-top: 0;
-    font-size: 18px;
-    color: #f0f0f0;
-}
-
-#inspector label {
-    display: block;
-    margin-bottom: 10px;
-    font-size: 14px;
-    color: #ccc;
-}
-
-#inspector input {
-    width: 100%;
-    margin-bottom: 10px;
-    padding: 5px;
-    background: #333;
-    border: 1px solid #555;
-    color: #e0e0e0;
-    border-radius: 4px;
-}
-
-
-#connections {
-    margin-top: 10px;
-}
-
-   #connections h4 {
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+            background-color: #1e1e1e;
+            cursor: grab;
+            border-bottom: 1px solid #333;
+        }
+    .emoji {
+	width: 1em;
+	height: 1em;
+	vertical-align: middle;  /* Aligns emoji with text */
+    }
+        #inspector {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 250px;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            padding: 15px;
+            display: none;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            overflow: auto;
+        }
+        #inspector h3 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #f0f0f0;
+        }
+        #inspector label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        #inspector input {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #333;
+            border: 1px solid #555;
+            color: #e0e0e0;
+            border-radius: 4px;
+        }
+        #connections {
+            margin-top: 10px;
+        }
+        #connections h4 {
             font-size: 16px;
             color: #f0f0f0;
             margin-top: 15px;
@@ -85,62 +74,37 @@ svg {
             align-items: center;
             justify-content: space-between;
         }
-
         #connections h4 button {
             background: none;
             border: none;
             color: #f0f0f0;
             font-size: 18px;
             cursor: pointer;
-}
-
-
-#connections ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-#connections ul li {
-    font-size: 14px;
-    color: #ccc;
-    cursor: pointer;
-    padding: 10px;
-    border-bottom: 1px solid #333;
-    margin-bottom: 5px;
-    border-radius: 4px;
-}
-
-#connections ul li:hover {
-    color: #fff;
-    background-color: #333;
-    border-radius: 4px;
-}
-
-
-
-
-
-
-.title-bar {
-    background-color: #333;
-    padding: 10px;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    color: #e0e0e0;
-    width: 100%;
-    z-index: 2;
-    cursor: row-resize;
-    user-select: none;
-}
-
- .title-bar {
+        }
+        #connections ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #connections ul li {
+            font-size: 14px;
+            color: #ccc;
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 5px;
+            border-radius: 4px;
+        }
+        #connections ul li:hover {
+            color: #fff;
+            background-color: #333;
+        }
+        .title-bar {
             background-color: #333;
             color: #ccc;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            /*justify-content: space-between;*/
             padding: 10px;
             cursor: ns-resize;
             position: sticky;
@@ -148,80 +112,63 @@ svg {
             width: 100%;
             z-index: 10;
         }
-.title-bar button {
-    background: none;
-    border: none;
-    color: #e0e0e0;
-    cursor: pointer;
-    font-size: 1.2em;
-    margin-right: 10px;
-    opacity: 1;
-    transition: opacity 0.3s;
-}
-
-.title-bar button.hidden {
-    opacity: 0.5;
-}
-
- #split-container {
+        .title-bar button {
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 1.2em;
+            margin-right: 10px;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+        .title-bar button.hidden {
+            opacity: 0.5;
+        }
+        #split-container {
             background-color: #f0f0f0;
             position: absolute;
             top: 50px; /* Initial top position */
             bottom: 0;
             width: 100%;
-            transition: top 0.2s;
+            /*(transition: top 0.2s;*/
         }
+        .flex-container-vertical {
+            display: flex;
+            flex-direction: column;
+            /*height: calc(100% - 50px); */ /* Adjust the height considering the title bar */
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        .flex-container {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        .section {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #444;
+            overflow: hidden;
+            background-color: #1e1e1e;
+        }
+        textarea {
+            flex: 1;
+            resize: none;
+            padding: 10px;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border: none;
+	    text-decoration: none !important;
 
-.flex-container-vertical {
-    display: flex;
-    flex-direction: column;
-    height: calc(100% - 50px); /* Adjust the height considering the title bar */
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-}
-
-.flex-container {
-    display: flex;
-    flex: 1;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-}
-
-.section {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #444;
-    overflow: hidden;
-    background-color: #1e1e1e;
-}
-
-textarea {
-    flex: 1;
-    resize: none;
-    padding: 10px;
-    background-color: #1e1e1e;
-    color: #e0e0e0;
-    border: none;
-}
-
-iframe {
-    flex: 1;
-    border: none;
-}
-
-
-
-
-
-
-#video-container {
-    //display: none;
-    }
-
-
-
+        }
+        iframe {
+            flex: 1;
+            border: none;
+        }
         #code-editor textarea {
             width: 100%;
             height: 100%;
@@ -231,18 +178,10 @@ iframe {
             padding: 10px;
             font-family: 'Courier New', monospace;
             font-size: 14px;
-            flex-grow: 1;
+	    text-decoration: none !important;
+
         }
-
-        #video-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            flex-grow: 1;
-}
-
-
-     table {
+        table {
             width: 100%;
             border-collapse: collapse;
         }
@@ -256,8 +195,7 @@ iframe {
         }
         td[contenteditable="true"] {
             background-color: #222;
-}
-
+        }
         pre {
             background-color: #333;
             padding: 10px;
@@ -268,17 +206,10 @@ iframe {
             color: red;
             font-size: 1.2em;
         }
-
-
-
-
-
-
-.grid-line {
-    stroke: #333;
-}
-
- #spotlightSearch {
+        .grid-line {
+            stroke: #333;
+        }
+        #spotlightSearch {
             display: none;
             position: fixed;
             top: 20%;
@@ -316,15 +247,14 @@ iframe {
         .result-item:hover, .result-item.selected {
             background-color: #444444;
         }
-
- .grouping-box {
+        .grouping-box {
             fill: purple;
             fill-opacity: 0.3;
             stroke: purple;
             stroke-width: 1px;
             stroke-dasharray: 4;
         }
- .resize-handle {
+        .resize-handle {
             fill: white;
             stroke: purple;
             stroke-width: 1px;
@@ -334,120 +264,126 @@ iframe {
             stroke: red;
         }
 
+.gutter {
+    background-color: #333;
+    background-repeat: no-repeat;
+    background-position: 50%;
+}
+
+.gutter.gutter-horizontal {
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+    cursor: col-resize;
+}
     </style>
 </head>
 <body>
     <svg>
-    <defs>
-        <marker id="arrowhead" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M0,-5L10,0L0,5" fill="#999" />
-        </marker>
-    </defs>
+        <defs>
+            <marker id="arrowhead" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,-5L10,0L0,5" fill="#999" />
+            </marker>
+        </defs>
     </svg>
-
     <div id="inspector">
-    <h3>Node Inspector</h3>
-    
-    <input type="hidden" id="nodeId">
-
-   <div style="display: flex; align-items: center; margin-bottom: 5px;">
-        <label style="width: 100px;">Name:</label>
-        <input type="text" id="nodeLabel" style="flex: 1;">
-    </div>
-    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-        <label style="width: 100px;">Link:</label>
-        <input type="text" id="nodeUrl" style="flex: 1;">
-    </div>
-    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-        <label style="width: 100px;">Image:</label>
-        <input type="text" id="nodeImageUrl" style="flex: 1;">
-    </div> 
-    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
-        <label hidden style="width: 100px;">X:</label>
-        <input type="number" id="nodeX" hidden style="flex: 1;">
-    </div>
-    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
-        <label hidden style="width: 100px;">Y:</label>
-        <input type="number" id="nodeY" hidden style="flex: 1;">
-    </div>
-    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
-        <label hidden style="width: 100px;">Width:</label>
-        <input type="number" id="nodeWidth" hidden style="flex: 1;">
-    </div>
-    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
-        <label hidden style="width: 100px;">Height:</label>
-        <input type="number" id="nodeHeight" hidden style="flex: 1;">
-    </div>
-    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
-        <label hidden style="width: 100px;">Instance:</label>
-        <input type="number" id="nodeInstance" hidden style="flex: 1;">
-    </div>
-    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-        <label style="width: 100px;">Type:</label>
-        <input type="text" id="nodeType" style="flex: 1;">
-    </div>
-    <div style="display: flex; align-items: center; margin-bottom: 5px;">
-        <label style="width: 100px;">SSH:</label>
-        <input type="text" id="connectionString" style="flex: 1;">
-    </div>
-    <div hidden style="display: none; align-items: center; margin-bottom: 5px;">
-        <label hidden style="width: 100px;">Background:</label>
-        <input type="text" id="nodeBackground" hidden style="flex: 1;">
-    </div>
-        
-
+        <!--<h3>Node Inspector</h3>-->
+        <input type="hidden" id="nodeId">
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Name</label>
+            <input type="text" id="nodeLabel" style="flex: 1;">
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Link</label>
+            <input type="text" id="nodeUrl" style="flex: 1;">
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Image</label>
+            <input type="text" id="nodeImageUrl" style="flex: 1;">
+        </div>
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">X:</label>
+            <input type="number" id="nodeX" style="flex: 1;">
+        </div>
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Y:</label>
+            <input type="number" id="nodeY" style="flex: 1;">
+        </div>
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Width:</label>
+            <input type="number" id="nodeWidth" style="flex: 1;">
+        </div>
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Height:</label>
+            <input type="number" id="nodeHeight" style="flex: 1;">
+        </div>
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Instance:</label>
+            <input type="number" id="nodeInstance" style="flex: 1;">
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Type</label>
+            <input type="text" id="nodeType" style="flex: 1;">
+        </div>
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Host</label>
+            <input type="text" id="connectionString" style="flex: 1;">
+        </div>
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
+            <label style="width: 4em;">Background:</label>
+            <input type="text" id="nodeBackground" style="flex: 1;">
+        </div>
         <div id="connections">
-          <h4>
-	    Connections To
-            <button id="linkConnectionsToButton">🔗</button>
-	  </h4>
+            <h4>
+                Connections To
+                <button id="linkConnectionsToButton">🔗</button>
+            </h4>
             <ul id="connectionsToList"></ul>
             <h4>
                 Connections From
                 <button id="linkConnectionsFromButton">🔗</button>
-	    </h4>
-    <ul id="connectionsFromList"></ul>
-            <h4>
-                Other Instances
-	    </h4>
-    <ul id="siblingsList"></ul>
-    
+            </h4>
+            <ul id="connectionsFromList"></ul>
+            <h4>Other Instances</h4>
+            <ul id="siblingsList"></ul>
         </div>
     </div>
-
-    <!-- Code editor, test editor, video viewer -->
-    <div>
-        <div class="flex-container-vertical-old" id="split-container" style="display:flex">            
+    <div class="flex-container-vertical" id="split-container">
     <div class="title-bar" id="title-bar">
-    <button onclick="toggleSection('code-editor')" class="hidden">source</button>
-    <button onclick="toggleSection('flake-editor')" class="hidden">flake</button>
-    <button onclick="toggleSection('test-editor')" class="hidden">tests</button>
-    <button onclick="toggleSection('console-container')" class="hidden">console</button>
-    <button onClick=runCommand()>🚀</button>
-    <button onclick="toggleSection('video-container')" class="hidden">video</button>
-    <button onclick="toggleSplitContainer()" id="toggleButton" style="background-color: #333; border: none; color: #ccc; width: 30px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 15px; transform: scaleX(1.1) scaleY(0.7) translateY(0.3em)">
-    ^
+    <div></div>
+    <button onclick="toggleSection('code-editor')" class="hidden">
+<img src="images/code-icon.svg" alt="code editor" class="emoji">
+    </button>
+    <button onclick="toggleSection('flake-editor')" class="hidden">
+     <img src="images/nix-logo.svg" alt="flake" class="emoji">
+    </button>
+    <button onclick="toggleSection('test-editor')" class="hidden">
+    <img src="images/tests-icon.svg" alt="tests pane" class="emoji">
 </button>
-
     
+    <button onclick="toggleSection('console-container')" class="hidden">
+    <img src="images/console-icon.svg" alt="console viewer" class="emoji">
     
+    </button>
+    <button onclick="runCommand()" class="hidden">
+    <img src="images/run-icon.svg" alt="upload script" class="emoji">
+</button>
     
-    </div>
-
-
-      <div id="horizontal-splitter" class="flex-container">
-	<div id="code-editor" class="section">
-          <textarea id="nodeCode"></textarea>
-	</div>
-	
-	<div id="flake-editor" class="section">
+    <button onclick="toggleSection('video-container')" class="hidden">
+    <img src="images/video-icon.svg" alt="video viewer" class="emoji">
+    </button>
+            <!--<button onclick="toggleSplitContainer()" id="toggleButton" style="background-color: #333; border: none; color: #ccc; width: 30px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 15px; transform: scaleX(1.1) scaleY(0.7) translateY(0.3em)">
+                ^
+    </button>-->
+<div></div>
+        </div>
+        <div id="horizontal-splitter" class="flex-container">
+            <div id="code-editor" class="section">
+                <textarea id="nodeCode"></textarea>
+            </div>
+            <div id="flake-editor" class="section">
                 <textarea id="nodeFlake"></textarea>
             </div>
-
-
             <div id="test-editor" class="section">
-              <!--<textarea id="nodeTests"></textarea>-->
-	        <table id="nodeTestsTable">
+                <table id="nodeTestsTable">
                     <thead>
                         <tr>
                             <th>Input</th>
@@ -463,29 +399,22 @@ iframe {
                         </tr>
                     </tbody>
                 </table>
-    </div>
-
-            <div id="console-container" class="section">
-    <iframe id="consoleContainer" src="" allowfullscreen></iframe>
             </div>
-
+            <div id="console-container" class="section">
+                <iframe id="consoleContainer" src="" allowfullscreen></iframe>
+            </div>
             <div id="video-container" class="section">
                 <iframe id="youtubeVideo" src="" allowfullscreen></iframe>
             </div>
         </div>
     </div>
-        
-</div>      
-       
-     
-      
-    
-
     <div id="spotlightSearch">
         <div id="searchTitle"></div>
         <input type="text" id="searchInput" placeholder="Search...">
         <div id="results"></div>
     </div>
+
+
     
     <!-- managing the tests table -->
 
@@ -618,21 +547,26 @@ async function evaluateJsonEntries(data, jsFunctionString) {
               
     <!-- split pane on the bottom -->
     <script>
-            const titleBar = document.getElementById('title-bar');
-        const splitContainer = document.getElementById('split-container');
-        let isDraggingTitleBar = false;
+    const titleBar = document.getElementById('title-bar');
+const splitContainer = document.getElementById('split-container');
+const inspectorGadget = document.getElementById('inspector');
+let isDraggingTitleBar = false;
 
-        titleBar.addEventListener('mousedown', function(e) {
-            isDraggingTitleBar = true;
-            document.body.style.cursor = 'ns-resize';
-        });
+titleBar.addEventListener('mousedown', function(e) {
+    isDraggingTitleBar = true;
+    document.body.style.cursor = 'ns-resize';
+});
 
-        document.addEventListener('mousemove', function(e) {
+inspectorGadget.style.maxHeight = `${window.innerHeight-titleBar.offsetHeight-10}px`
+splitContainer.style.top = `${window.innerHeight-titleBar.offsetHeight}px`;
+        window.addEventListener('mousemove', function(e) {
             if (!isDraggingTitleBar) return;
-            let newTop = e.clientY;
+            let newTop  = e.clientY - titleBar.offsetHeight/2.0;
+
             if (newTop < 0) newTop = 0;
-            if (newTop > window.innerHeight) newTop = window.innerHeight;
+            if (newTop > window.innerHeight-titleBar.offsetHeight) newTop = window.innerHeight-titleBar.offsetHeight;
             splitContainer.style.top = `${newTop}px`;
+            inspectorGadget.style.maxHeight = `${newTop-titleBar.offsetHeight-10}px`
         });
 
         document.addEventListener('mouseup', function() {
@@ -2804,6 +2738,9 @@ async function selectNode(event,d) {
 	toggleSection('video-container', action="show")
 	setVideoUrl(d.url);
 	//setVideoTitle(d.label);
+    } else if (d.url.length > 1) {	
+	document.getElementById('youtubeVideo').src = `/proxy?url=${d.url}`;
+
     } else {
 	toggleSection('video-container', action="hide")
     }
