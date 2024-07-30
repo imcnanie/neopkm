@@ -2382,7 +2382,15 @@ function updateLinksAndNodes() {
         .merge(labels)
         .attr("x", d => d.imageUrl ? d.x_positions[d.instance] + 30 : d.x_positions[d.instance] + 10)  // Adjust x position based on node type
         .attr("y", d => d.imageUrl ? d.y_positions[d.instance] + 10 : d.y_positions[d.instance])
-        .text(d => d.label)
+        .text(d => {
+	    if (isYouTubeLink(d.url)) {
+		return `${d.label} 🎬`;  // Adds video emoji for YouTube links
+	    } else if (d.url) {
+		return `${d.label} 🌐`;  // Adds internet emoji for other links
+	    } else {
+		return d.label;
+	    }
+	}) //.text(d => d.url ? `${d.label} 🌐` : d.label) //.text(d => d.label)
         .attr("label", d => d.label)
         .attr("instance", d => d.instance)
         .attr("font-size", "12px")
