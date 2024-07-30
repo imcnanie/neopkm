@@ -319,8 +319,9 @@
         <div style="display: none; align-items: center; margin-bottom: 5px;">
             <label style="width: 4em;">Instance:</label>
             <input type="number" id="nodeInstance" style="flex: 1;">
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+    </div>
+
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
             <label style="width: 4em;">Type</label>
             <input type="text" id="nodeType" style="flex: 1;">
         </div>
@@ -427,10 +428,12 @@
     var firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-    // Create a variable to hold the player
+    // Create a variable to hold the playah
     var player;
     var videoIdToLoad = null;
-    var startTime = 0;
+      var startTime = 0;
+var lastVideoId = "";
+var lastVideoNodeId = "";
 
     // This function creates an <iframe> (and YouTube player) after the API code downloads.
     function onYouTubeIframeAPIReady() {
@@ -440,7 +443,7 @@
     }
 
     // Function to create the YouTube player
-    function createPlayer(videoId, startTime) {
+      function createPlayer(videoId, startTime) {
       player = new YT.Player('player', {
         height: '100%',
         width: '100%',
@@ -453,9 +456,18 @@
     }
 
     // Function to set up the YouTube player with the given video ID and start time
-function setupYouTubePlayer(videoId, time = 0) {
+      function setupYouTubePlayer(videoId, time = 0) {
+	  if (videoId === lastVideoId) {
+	      console.log("this video already got a playah in the game!")
+	      return;
+	  }
+	  lastVideoId = videoId;
+	  lastVideoNodeId = currentNode.id;
+
+	  console.log(document.getElementById('player'))
 	document.getElementById('webIframe').style.display = "none";
-	document.getElementById('player').style.display = "flex";
+	  document.getElementById('player').style.display = "flex";
+	  
 	startTime = parseFloat(time);
       if (typeof YT !== 'undefined' && YT && YT.Player) {
         if (player) {
@@ -487,7 +499,7 @@ function setupYouTubePlayer(videoId, time = 0) {
 	var currentTime = player.getCurrentTime();
 	    console.log('Current time: ' + currentTime + ' seconds');
 	    if (currentTime > 5) {
-		updateNodeProperty(currentNode.id, "videoTime", currentTime)
+		updateNodeProperty(lastVideoNodeId, "videoTime", currentTime)
 	    }
 	
 	}
@@ -881,6 +893,8 @@ const nodeLayer = g.append("g").attr("class", "nodes");
 let isDragging = false;
 let startPoint = null;
 let currentBox = null;
+    let lastClickTime = 0;
+const doubleClickThreshold = 300;
 
 svg.on("mousedown", (event) => {
     if (event.ctrlKey && event.target === svg.node()) {
@@ -1604,6 +1618,52 @@ async function updateNodeProperties(id, label, url, imageUrl, x, y, width, heigh
     }
 }
 
+
+async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
+    console.log("CREATED FROM", sourceId);
+    const width = 0;
+    const height = 0;
+    const type = "node";
+    const session = driver.session();
+
+    // Check if a node with the same label already exists
+    const existingNodeCheck = await session.run(
+        `MATCH (n {label: $label})
+         RETURN n`,
+        { label }
+    );
+
+    if (existingNodeCheck.records.length > 0) {
+        // Node with the same label exists, return null or appropriate response
+        session.close();
+        console.log("Node with the same label already exists");
+        return null;
+    }
+
+    const result = await session.run(
+        `MATCH (source {id: $sourceId})
+         CREATE (newNode {
+             id: randomUUID(),
+             x: $x,
+             y: $y,
+             x_positions: [$x],
+             y_positions: [$y],
+             widths: [$width],
+             heights: [$height],
+             type: $type,
+             background: 'rgb(255,219,0)',
+             label: $label,
+             url: $url,
+             imageUrl: $imageUrl
+         })
+         CREATE (source)-[:CONNECTED_TO]->(newNode)
+         RETURN newNode`,
+        { sourceId, x, y, width, height, type, label, url, imageUrl }
+    );
+
+    session.close();
+    return result.records[0].get('newNode').properties;
+}
 
 
 async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
@@ -2399,7 +2459,7 @@ function updateLinksAndNodes() {
     const inheritedNodes = nodesWithoutImages.filter(d => d.type === 'inherited');
     const regularNodes = nodesWithoutImages.filter(d => d.type !== 'grouping_box' && d.type !== 'inherited');
 
-    
+
 
     // Function to update rects
     function updateRects(layer, data, fill, stroke, strokeDasharray) {
@@ -2431,6 +2491,17 @@ function updateLinksAndNodes() {
             .attr("stroke-dasharray", strokeDasharray)
             .on("mousedown", async function (event, d) {
 		selectNode(event, d);
+		
+		const currentTime = new Date().getTime();
+		const timeSinceLastClick = currentTime - lastClickTime;
+		
+		if (timeSinceLastClick < doubleClickThreshold) {
+		    await handleDoubleClick(event);
+		} else {
+		    // Single click
+		}
+		
+		lastClickTime = currentTime;
             })
             .call(setupDragBehavior)
             .on("contextmenu", async function (event, d) {
@@ -2449,6 +2520,7 @@ function updateLinksAndNodes() {
 		}
             })
             .on("dblclick", async (event, d) => {
+		console.log("GOT DBLCLK")
 		// Handle double-click event
             });
     }
@@ -2499,10 +2571,10 @@ function updateLinksAndNodes() {
                 drawGrid(cur_trans);
                 drawNodesAndLinks(cur_trans);
             }
-        })
-        .on("dblclick", async (event, d) => {
-            const newX = d.x + 20; // New node's X coordinate
-            const newY = d.y + 20; // New node's Y coordinate
+        });
+        /*.on("dblclick", async (event, d) => {
+            const newX = d.x; // New node's X coordinate
+            const newY = d.y + 30; // New node's Y coordinate
             const userInput = openSearch('Create a new node with shift+enter or connect to an existing node');
             
             let label = userInput.label;
@@ -2528,7 +2600,7 @@ function updateLinksAndNodes() {
                 }
                 drawNodesAndLinks(cur_trans);
             }
-        });
+        });*/
 
     // Update labels
     const labels = nodeLayer.selectAll("text").data(nodes, d => d.id);
@@ -2911,7 +2983,7 @@ async function selectNode(event,d) {
 	document.getElementById('player').style.display = "none";
 	//restoreScrollPosition(d);    
     } else {
-	toggleSection('video-container', action="hide")
+	//toggleSection('video-container', action="hide")
     }
 
     setCodeEditorTitle(d.label);
@@ -3272,6 +3344,7 @@ if (savedTransform) {
 
 // Function to handle double-click event
 async function handleDoubleClick(event) {
+    console.log("DOUBLE CLICK")
     event.preventDefault();
     event.stopPropagation();
     // Get the mouse coordinates relative to the SVG element
@@ -3287,8 +3360,8 @@ async function handleDoubleClick(event) {
 	
 	//console.log("BROH", event.target.__data__.label, g.node())
 
-	const newX = x + 20; // New node's X coordinate
-        const newY = y + 20; // New node's Y coordinate
+	const newX = x; // New node's X coordinate
+        const newY = y + 30; // New node's Y coordinate
         const userInput = await openSearch('Create a new node with shift+enter or connect to an existing node');
         
         let label = userInput.label;
@@ -3317,11 +3390,24 @@ async function handleDoubleClick(event) {
     }
 }
 
+
+
+
 // Attach the double-click event listener to the SVG canvas
 svg.on("dblclick", handleDoubleClick);
+//nodeLayer.on("dblclick", handleDoubleClick);
+//rect.on("dblclick", handleDoubleClick);
+// Assuming you have a reference to the SVG element
+//const svgElement = document.querySelector('svg');
+
+// Attach the double-click event listener to the SVG element
+//window.addEventListener('dblclick', handleDoubleClick);
+
+// Attach the double-click event listener to the window
 
 // Apply the zoom behavior to the SVG element
 svg.call(zoom).on("dblclick.zoom", null);
+
 
 
 
