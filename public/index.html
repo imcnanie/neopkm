@@ -7,6 +7,7 @@
     <script src="/d3.v6.min.js"></script>
     <script src="/neo4j-driver"></script>
     <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         html, body {
             height: 100%;
@@ -404,7 +405,8 @@
                 <iframe id="consoleContainer" src="" allowfullscreen></iframe>
             </div>
             <div id="video-container" class="section">
-                <iframe id="youtubeVideo" src="" allowfullscreen></iframe>
+    <iframe id="webIframe" src="" allowfullscreen></iframe>
+    <div id="player"></div>
             </div>
         </div>
     </div>
@@ -414,8 +416,160 @@
         <div id="results"></div>
     </div>
 
+    <!-- managing youtube video position -->
+    <script>
 
+
+
+  // Load the IFrame Player API code asynchronously.
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    // Create a variable to hold the player
+    var player;
+    var videoIdToLoad = null;
+    var startTime = 0;
+
+    // This function creates an <iframe> (and YouTube player) after the API code downloads.
+    function onYouTubeIframeAPIReady() {
+      if (videoIdToLoad) {
+        createPlayer(videoIdToLoad, startTime);
+      }
+    }
+
+    // Function to create the YouTube player
+    function createPlayer(videoId, startTime) {
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: videoId,
+        events: {
+          'onReady': function(event) { onPlayerReady(event, startTime); },
+          'onStateChange': onPlayerStateChange
+        }
+      });
+    }
+
+    // Function to set up the YouTube player with the given video ID and start time
+function setupYouTubePlayer(videoId, time = 0) {
+	document.getElementById('webIframe').style.display = "none";
+	document.getElementById('player').style.display = "flex";
+	startTime = parseFloat(time);
+      if (typeof YT !== 'undefined' && YT && YT.Player) {
+        if (player) {
+          player.loadVideoById(videoId);
+          startTime = time;
+        } else {
+          createPlayer(videoId, startTime);
+        }
+      } else {
+        videoIdToLoad = videoId;
+        startTime = time;
+      }
+    }
+
+    // The API will call this function when the video player is ready.
+    function onPlayerReady(event, startTime) {
+      // Nothing to do here anymore
+    }
+
+    // The API calls this function when the player's state changes.
+    function onPlayerStateChange(event) {
+	if (event.data == YT.PlayerState.PLAYING && startTime > 0) {
+            player.seekTo(startTime, true);
+	    console.log(startTime)
+            startTime = 0; // Reset start time to prevent seeking multiple times
+	}
+
+	if (player) {
+	var currentTime = player.getCurrentTime();
+	    console.log('Current time: ' + currentTime + ' seconds');
+	    if (currentTime > 5) {
+		updateNodeProperty(currentNode.id, "videoTime", currentTime)
+	    }
+	
+	}
+
+
+      if (event.data == YT.PlayerState.ENDED) {
+        alert('Video has ended');
+      }
+    }
+
+
+
+
+
+
+    </script>
+
+    <!-- saving scroll position on the iframe -->
+    <script>
+    let currentNode;
+
+async function updateNodeProperty(nodeId, propertyName, propertyValue) {
+  const session = driver.session();
+  
+  try {
+    // Construct the query dynamically using the propertyName
+    const query = `MATCH (n { id: $nodeId }) SET n.${propertyName} = $propertyValue RETURN n`;
     
+    // Run the query to set the specified property
+    const result = await session.run(
+      query,
+      { nodeId: nodeId, propertyValue: propertyValue }
+    );
+
+      console.log(`${nodeId}'s property ${propertyName} updated to ${propertyValue}`, result);
+  } catch (error) {
+    console.error('Error updating node:', error);
+  } finally {
+    await session.close();
+  }
+}
+
+
+    // Function to save scroll position
+function saveScrollPosition() {
+    console.log("SAVING SCROLL POSITION")
+      const iframe = document.getElementById('webIframe');
+      const scrollPosition = iframe.contentWindow.document.documentElement.scrollTop || iframe.contentWindow.document.body.scrollTop;
+    updateNodeProperty(currentNode.id, "scrollPosition", scrollPosition);
+      // localStorage.setItem(currentNode.id + 'iframeScrollPosition', scrollPosition);
+    }
+
+    // Function to restore scroll position
+function restoreScrollPosition(currentNode) {
+    
+    const scrollPosition = currentNode.scrollPosition; // localStorage.getItem(currentNode.id + 'iframeScrollPosition');
+    console.log("RESTORING SCROLL POSITION",currentNode.scrollPosition)
+      if (scrollPosition !== null) {
+        const iframe = document.getElementById('webIframe');
+        iframe.contentWindow.scrollTo(0, scrollPosition);
+      }
+    }
+
+    // Add event listener to track scroll position
+    document.getElementById('webIframe').addEventListener('load', function() {
+      const iframeContent = this.contentWindow;
+      iframeContent.addEventListener('scroll', function() {
+        // Throttle the scroll event listener to avoid excessive updates
+        clearTimeout(iframeContent.scrollTimeout);
+        iframeContent.scrollTimeout = setTimeout(saveScrollPosition, 100);
+      });
+
+	// Restore scroll position when iframe loads
+	try {
+	    restoreScrollPosition(currentNode);
+	} catch (error) {
+	    console.log(error);
+	}
+    });
+
+    </script>
+
     <!-- managing the tests table -->
 
     <script>
@@ -668,18 +822,22 @@ function initializeSplit() {
             document.getElementById('videoTitleBar').textContent = title;
         }
 */
-        function setVideoUrl(url) {
-            const videoId = getYouTubeVideoId(url);
-            if (videoId) {
-                const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-                document.getElementById('youtubeVideo').src = embedUrl;
-            } else {
-                alert('Invalid YouTube URL');
-            }
-	    const video = document.getElementById('video-container');
-            video.style.display = 'flex';
-
-        }
+function setVideoUrl(d) {
+    const videoId = getYouTubeVideoId(d.url);
+    if (videoId) {
+	console.log("VIDEO NODE", parseFloat(d.videoTime))
+	setupYouTubePlayer(videoId, time = parseFloat(d.videoTime));  // Replace this with the desired video ID
+        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        //document.getElementById('webIframe').src = `${embedUrl}`; //embedUrl
+	
+    } else {
+	
+        alert('Invalid YouTube URL');
+    }
+    const video = document.getElementById('video-container');
+    video.style.display = 'flex';
+    
+}
 
 function getYouTubeThumbnail(url) {
     const videoId = getYouTubeVideoId(url);
@@ -2728,6 +2886,7 @@ async function selectNode(event,d) {
     inspector.style.display = "block";
     codeEditor.style.display = "block";
     document.getElementById("nodeId").value = d.id;
+    currentNode = d;
     document.getElementById("nodeLabel").value = d.label;
     document.getElementById("nodeUrl").value = d.url;
     document.getElementById("nodeImageUrl").value = d.imageUrl;
@@ -2744,11 +2903,13 @@ async function selectNode(event,d) {
     
     if (isYouTubeLink(d.url) === true) {
 	toggleSection('video-container', action="show")
-	setVideoUrl(d.url);
+	setVideoUrl(d);
 	//setVideoTitle(d.label);
     } else if (d.url.length > 1) {	
-	document.getElementById('youtubeVideo').src = `/proxy?url=${d.url}`;
-
+	document.getElementById('webIframe').src = `/proxy?url=${d.url}`;
+	document.getElementById('webIframe').style.display = "flex";
+	document.getElementById('player').style.display = "none";
+	//restoreScrollPosition(d);    
     } else {
 	toggleSection('video-container', action="hide")
     }
@@ -2879,186 +3040,6 @@ async function selectNode(event,d) {
     });
     
     
-    /*    if (d.label.includes(".js") && event.shiftKey) {
-
-	  console.log("BBBBRRRU", event);
-
-
-
-	  async function getNodesAndRelationships(d) {
-	  const session = driver.session();
-
-	  try {
-	  // Query to get grouping box parameters from any node with type `grouping_box`
-	  const groupingBoxResult = await session.run(`
-	  MATCH (box {type: 'grouping_box'})
-	  RETURN box.x_positions AS x_positions, box.y_positions AS y_positions, box.widths AS widths, box.heights AS heights
-	  `);
-
-	  const { x_positions, y_positions, widths, heights } = groupingBoxResult.records[0].toObject();
-
-	  // Function to check if a point is within a box, considering the box is positioned by its center
-	  function isInBox(x, y, xCenter, yCenter, width, height) {
-	  const xMin = xCenter - width / 2;
-	  const xMax = xCenter + width / 2;
-	  const yMin = yCenter - height / 2;
-	  const yMax = yCenter + height / 2;
-	  return x >= xMin && x <= xMax && y >= yMin && y <= yMax;
-	  }
-
-	  // Find all grouping boxes that contain at least one instance of node `d`
-	  const groupingBoxIndices = [];
-	  for (let i = 0; i < x_positions.length; i++) {
-	  for (let j = 0; j < d.x_positions.length; j++) {
-	  if (isInBox(d.x_positions[j], d.y_positions[j], x_positions[i], y_positions[i], widths[i], heights[i])) {
-	  groupingBoxIndices.push({boxIndex: i, instanceIndex: j});
-	  }
-	  }
-	  }
-
-	  if (groupingBoxIndices.length === 0) {
-	  console.log(`Node d coordinates: (${d.x_positions}, ${d.y_positions})`);
-	  console.log('Grouping Boxes:');
-	  for (let i = 0; i < x_positions.length; i++) {
-	  console.log(`Box ${i}: x=${x_positions[i]}, y=${y_positions[i]}, width=${widths[i]}, height=${heights[i]}`);
-	  }
-	  throw new Error("Node `d` is not within any grouping box.");
-	  }
-
-	  // Function to get nodes and relationships for a specific grouping box index
-	  async function getNodesAndRelationshipsForBox(groupingBoxIndex, instanceIndex, instanceLabel) {
-	  const result = await session.run(`
-          MATCH (startNode {label: "${d.label}"})
-          WITH startNode
-          MATCH p = (startNode)-[:CONNECTED_TO*]->(node)
-          WHERE node.label ENDS WITH '.js'
-          AND any(pos in node.x_positions WHERE pos >= ${x_positions[groupingBoxIndex]} - ${widths[groupingBoxIndex] / 2} AND pos <= ${x_positions[groupingBoxIndex]} + ${widths[groupingBoxIndex] / 2})
-          AND any(pos in node.y_positions WHERE pos >= ${y_positions[groupingBoxIndex]} - ${heights[groupingBoxIndex] / 2} AND pos <= ${y_positions[groupingBoxIndex]} + ${heights[groupingBoxIndex] / 2})
-          AND all(n in nodes(p) WHERE 
-          any(pos in n.x_positions WHERE pos >= ${x_positions[groupingBoxIndex]} - ${widths[groupingBoxIndex] / 2} AND pos <= ${x_positions[groupingBoxIndex]} + ${widths[groupingBoxIndex] / 2})
-          AND any(pos in n.y_positions WHERE pos >= ${y_positions[groupingBoxIndex]} - ${heights[groupingBoxIndex] / 2} AND pos <= ${y_positions[groupingBoxIndex]} + ${heights[groupingBoxIndex] / 2})
-          )
-          RETURN DISTINCT startNode, p
-	  `);
-
-	  const nodes = new Map();
-	  const relationships = new Set();
-
-	  result.records.forEach(record => {
-	  const startNode = record.get('startNode').properties;
-	  const path = record.get('p');
-
-	  const instanceStartNode = { ...startNode, label: instanceLabel };
-	  if (!nodes.has(instanceStartNode.label)) {
-	  nodes.set(instanceStartNode.label, instanceStartNode);
-	  }
-
-	  path.segments.forEach(segment => {
-	  const start = segment.start.properties;
-	  const end = segment.end.properties;
-
-	  const instanceStart = { ...start, label: `${start.label}` };
-	  const instanceEnd = { ...end, label: `${end.label}` };
-
-	  if (!nodes.has(instanceStart.label)) {
-	  nodes.set(instanceStart.label, instanceStart);
-	  }
-
-	  if (!nodes.has(instanceEnd.label)) {
-	  nodes.set(instanceEnd.label, instanceEnd);
-	  }
-
-	  relationships.add(JSON.stringify({ from: instanceStart.label, to: instanceEnd.label }));
-	  });
-	  });
-
-	  return { nodes: Array.from(nodes.values()), relationships: Array.from(relationships).map(rel => JSON.parse(rel)) };
-	  }
-
-	  // Collect results for all relevant grouping boxes and instances
-	  const results = [];
-	  for (let i = 0; i < groupingBoxIndices.length; i++) {
-	  const {boxIndex, instanceIndex} = groupingBoxIndices[i];
-	  const instanceLabel = instanceIndex === 0 ? `${d.label}` : `${d.label.split('.js')[0]}_${instanceIndex}.js`;
-	  const result = await getNodesAndRelationshipsForBox(boxIndex, instanceIndex, instanceLabel);
-	  results.push(result);
-	  }
-
-	  // Merge results without combining instances
-	  const mergedNodes = [];
-	  const mergedRelationships = [];
-
-	  results.forEach(result => {
-	  mergedNodes.push(...result.nodes);
-	  mergedRelationships.push(...result.relationships);
-	  });
-
-	  return { nodes: mergedNodes, relationships: mergedRelationships };
-	  } finally {
-	  await session.close();
-	  }
-	  }
-
-	  
-	  
-	  
-
-	  
-
-
-
-
-	  
-
-	  function createFunctionCode(nodes, relationships) {
-	  const functionCalls = {};
-
-	  relationships.forEach(rel => {
-	  const from = rel.from.replace('.js', '');
-	  const to = rel.to.replace('.js', '');
-
-	  if (!functionCalls[from]) {
-	  functionCalls[from] = [];
-	  }
-
-	  functionCalls[from].push(to);
-	  });
-
-	  return nodes.map(node => {
-	  const functionName = node.label.replace('.js', '');
-	  const code = node.code || '';
-	  const calls = functionCalls[functionName] || [];
-	  
-	  // Generate callCode based on relationships for all functions, with null check
-	  const callCode = calls.map(call => `  if (output !== null) {\n    ${call}(output);\n  }`).join('\n');
-
-	  // Default output value
-	  const defaultOutput = `null`;
-	  
-	  return `function ${functionName}(input = "") {\n  let output = ${defaultOutput};\n  ${code}\n${callCode}\n}`;
-	  }).join('\n\n');
-	  }
-
-	  async function executeFunctionCode(d) {
-	  const { nodes, relationships } = await getNodesAndRelationships(d);
-	  
-	  if (nodes.length === 0 || relationships.length === 0) {
-	  // No nodes or relationships found, just eval the current code
-	  eval(d.code);
-	  } else {
-	  // Generate and eval the function code
-	  const functionsCode = createFunctionCode(nodes, relationships) + `\n${d.label.replace(".js","")}();`;
-	  console.log(functionsCode);
-	  eval(functionsCode);
-	  }
-	  }
-
-	  // Execute the function with the given 'd' object
-	  executeFunctionCode(d);
-
-	  
-	  }*/
-
     console.log("EXECUTING CODE")
 
 
@@ -3248,9 +3229,6 @@ console.log("Generated Main Function:\n", mainFunction);
 }
     
    
-    
-    
-
 }
 
 
