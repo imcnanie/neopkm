@@ -1,4 +1,5 @@
 const express = require('express');
+const multer = require('multer');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
@@ -6,6 +7,19 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 8004;
+
+// Set up storage for multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'public/uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
+
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -16,6 +30,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Serve the index.html file for the root route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Handle file upload
+app.post('/upload', upload.single('image'), (req, res) => {
+    if (req.file) {
+	console.log(req.file)
+      res.json({ status: 'success', filename: req.file.filename });
+  } else {
+    res.status(400).json({ status: 'fail' });
+  }
 });
 
 // Proxy route to fetch external pages

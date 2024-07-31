@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infinite Grid with D3.js and Neo4j</title>
+    <title>neopkm</title>
     <script src="/d3.v6.min.js"></script>
     <script src="/neo4j-driver"></script>
     <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>	
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         html, body {
@@ -308,11 +309,11 @@
             <label style="width: 4em;">Y:</label>
             <input type="number" id="nodeY" style="flex: 1;">
         </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <label style="width: 4em;">Width:</label>
             <input type="number" id="nodeWidth" style="flex: 1;">
         </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
+        <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <label style="width: 4em;">Height:</label>
             <input type="number" id="nodeHeight" style="flex: 1;">
         </div>
@@ -372,6 +373,10 @@
     <button onclick="toggleSection('video-container')" class="hidden">
     <img src="images/video-icon.svg" alt="video viewer" class="emoji">
     </button>
+
+  <input type="file" id="imageInput">
+  <button id="screenshot-button" onclick="uploadImage()">📷</button>
+  <div id="uploadStatus"></div>
             <!--<button onclick="toggleSplitContainer()" id="toggleButton" style="background-color: #333; border: none; color: #ccc; width: 30px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 15px; transform: scaleX(1.1) scaleY(0.7) translateY(0.3em)">
                 ^
     </button>-->
@@ -417,6 +422,39 @@
         <div id="results"></div>
     </div>
 
+
+    <!-- image upload -->
+      <script>
+    function uploadImage() {
+      const imageInput = document.getElementById('imageInput');
+      const file = imageInput.files[0];
+      const formData = new FormData();
+      formData.append('image', file);
+
+      fetch('/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+            document.getElementById('uploadStatus').innerHTML = `Upload successful! File path: ${data.filename}`;
+	    createNodeAndLink(currentNode.id, currentNode.x_positions[0], currentNode.y_positions[0]+30,
+			      data.filename, "", "/uploads/"+data.filename);
+        } else {
+          document.getElementById('uploadStatus').innerHTML = 'Upload failed!';
+        }
+
+	  
+      })
+      .catch(error => {
+        document.getElementById('uploadStatus').innerHTML = 'Error occurred during upload!';
+        console.error('Error:', error);
+      });
+    }
+      </script>
+      
+
     <!-- managing youtube video position -->
     <script>
 
@@ -424,7 +462,7 @@
 
   // Load the IFrame Player API code asynchronously.
     var tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
+    tag.src = "/proxy?url=https://www.youtube.com/iframe_api";
     var firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
@@ -1846,7 +1884,7 @@ async function createOrphanNode(x, y) {
             return result.records[0].get('newNode').properties;
         }
         
-        drawNodesAndLinks(cur_trans);
+        //drawNodesAndLinks(cur_trans);
     }
 }
 
@@ -2182,7 +2220,6 @@ function updateLinksAndNodes() {
         return newLinks;
     }
 
-    // Assuming nodes and links are defined somewhere before this
     const updatedLinks = createLinkData(nodes, links);
 
     // Update links
@@ -2260,8 +2297,8 @@ function updateLinksAndNodes() {
             if (newType) {
                 await updateRelationshipType(d.source, d.target, newType);
                 d.type = newType;
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
+                //drawGrid(cur_trans);
+                //drawNodesAndLinks(cur_trans);
             }
         })
         .on("contextmenu", async function (event, d) {
@@ -2270,8 +2307,8 @@ function updateLinksAndNodes() {
             if (confirmed) {
                 await deleteRelationship(d.source, d.target);
                 links = links.filter(link => link.source !== d.source || link.target !== d.target);
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
+                //drawGrid(cur_trans);
+                //drawNodesAndLinks(cur_trans);
             }
         });
 
@@ -2280,9 +2317,32 @@ function updateLinksAndNodes() {
     const nodesWithoutImages = nodes.filter(d => !d.imageUrl);
 
     function updateNodePositionAndLinks(d) {
+	
+// Ensure each link has a unique ID so we can select them for updating
+links.forEach(link => {
+    link.id = `${link.source.id}-${link.target.id}`;
+});
+
+// Append the links (assuming you have a selection for links)
+const linkSelection = linkLayer.selectAll('.link').data(links);
+
+linkSelection.enter()
+    .append('line')
+    .attr('class', 'link')
+    .attr('id', d => `link-${d.id}`)
+    .attr('x1', d => d.source.x_positions[d.source.instance])
+    .attr('y1', d => d.source.y_positions[d.source.instance])
+    .attr('x2', d => d.target.x_positions[d.target.instance])
+    .attr('y2', d => d.target.y_positions[d.target.instance])
+    .attr('stroke', 'gray')
+    .merge(linkSelection);
+
+	linkSelection.exit().remove();
+	
         // Update the node's position in the nodes array
         nodes.find(n => n.id === d.id).x_positions[d.instance] = d.x;
         nodes.find(n => n.id === d.id).y_positions[d.instance] = d.y;
+	console.log(nodes.find(n => n.id === d.id));
 
         // Update the links connected to the node
         linkLayer.selectAll("line")
@@ -2314,20 +2374,29 @@ function updateLinksAndNodes() {
                 return (sourceNode.y_positions[l.sourceInstance] + targetNode.y_positions[l.targetInstance]) / 2;
             });
 
-        // Update labels position
-        nodeLayer.selectAll("text")
-            .attr("x", t => t.imageUrl ? t.x_positions[t.instance] + 30 : t.x_positions[t.instance] + 10)
-            .attr("y", t => t.imageUrl ? t.y_positions[t.instance] + 10 : t.y_positions[t.instance]);
 
+
+        // Update labels position
+//        nodeLayer.selectAll("text")	
+ //           .attr("x", d => d.imageUrl ? d.x_positions[d.instance] + 30 : d.x_positions[d.instance] + 10)  // Adjust x position based on node type
+  //          .attr("y", d => d.imageUrl ? d.y_positions[d.instance] + 10 : d.y_positions[d.instance])
+//            .attr("x", //t => t.imageUrl ? t.x_positions[t.instance] + 30 : t.x_positions[t.instance] + 10)
+  //          .attr("y", //t => t.imageUrl ? t.y_positions[t.instance] + 10 : t.y_positions[t.instance]);
+
+	//nodeLayer.selectAll("text")
+        //    .attr("cx", n => n.x_positions[n.instance])
+         //   .attr("cy", n => n.y_positions[n.instance]);
+
+    
         // Update circle positions
-        nodeLayer.selectAll("rect")
-            .attr("cx", n => n.x_positions[n.instance])
-            .attr("cy", n => n.y_positions[n.instance]);
+        //nodeLayer.selectAll("onenode")
+        //    .attr("cx", n => n.x_positions[n.instance])
+         //   .attr("cy", n => n.y_positions[n.instance]);
 
         // Update image positions
-        nodeLayer.selectAll("image")
-            .attr("x", n => n.x_positions[n.instance] - 20)
-            .attr("y", n => n.y_positions[n.instance] - 20);
+        //nodeLayer.selectAll("image")
+        //    .attr("x", n => n.x_positions[n.instance] - n.widths[n.instance]/2)
+         //   .attr("y", n => n.y_positions[n.instance] - n.heights[n.instance]/2);
     }
 
     function findLabel(label, instance) {
@@ -2337,30 +2406,65 @@ function updateLinksAndNodes() {
             })
             .node(); // returns the first matching element or null if none found
     }
+
+    function findAllLabels(p) {
+    console.log(p);
+    let label = p.label;
+    let instance = p.instance;
+    let xPosition = p.x_positions[instance];
+
+    // Select and delete nodes that match the label and instance but do not have the same x_position
+    nodeLayer.selectAll("rect")
+        .filter(function(d) {
+            return d.label === label && d.instance === instance && d.x_positions[instance] !== xPosition;
+        })
+        .remove();
+
+    /*nodeLayer.selectAll("image")
+        .filter(function(d) {
+            return d.label === label && d.instance === instance && d.x_positions[instance] !== xPosition;
+        })
+        .remove();
+*/
+	
+    // Return the remaining nodes that match the criteria
+    return nodeLayer.selectAll("text")
+        .filter(function(d) {
+            return d.label === label && d.instance === instance && d.x_positions[instance] === xPosition;
+        })
+        .nodes(); // returns an array of all matching elements
+}
+
     
+        
     function setupDragBehavior(selection) {
         selection.call(d3.drag()
 		       .on("start", function (event, d) {
 			   d3.select(this).raise().attr("stroke", "white");
 		       })
-		       .on("drag", function (event, d) {
-			   
-			   if (d.x_positions.length >= 1) {
-			       d3.select(this).remove();
+		       .on("drag", async function (event, d) {
+			    //d3.select(this).remove();
+			   /*if (d.x_positions.length >= 1) {
+			      
 			       //d3.select(findLabel(d.label, d.instance)).remove();
-			   }
+			   }*/
 			   
 			   d.x = event.x;
 			   d.y = event.y;
-			   
+
+			   //console.log(findAllLabels(d.label, d.instance))
 			   // Update the position of the dragged element
 			   d3.select(this)
 			       .attr("cx", d.x)
 			       .attr("cy", d.y)
-			       .attr("x", d.x - 20)  // For images
-			       .attr("y", d.y - 20); // For images
+			       .attr("x", d.x)  // For images
+			       .attr("y", d.y); // For images
 
+			   
 			   updateNodePositionAndLinks(d);
+			   //drawNodesAndLinks(cur_trans);
+			   //await updateNodePosition(d.id, d.x, d.y, d.instance);
+			   //await updateNodePosition(d.id, d.x, d.y, d.instance);
 
 			   // Update inspector with current position
 			   document.getElementById("nodeX").value = d.x;
@@ -2375,8 +2479,8 @@ function updateLinksAndNodes() {
 			   d3.select(this).attr("stroke", null);
 			   await updateNodePosition(d.id, d.x, d.y, d.instance);
 
-			   updateNodePositionAndLinks(d);
-			   drawNodesAndLinks(cur_trans);
+			   //updateNodePositionAndLinks(d);
+			   //drawNodesAndLinks(cur_trans);
 		       })
 		      );
     }
@@ -2463,12 +2567,14 @@ function updateLinksAndNodes() {
 
     // Function to update rects
     function updateRects(layer, data, fill, stroke, strokeDasharray) {
+
+	
 	let rect = layer.selectAll("rect").data(data, d => d.id);
 
 	rect.exit().remove();
 
 	rect.enter()
-            .append("rect")
+            .append("rect")    
             .attr("width", d => Number(d.widths[d.instance]) || 20)  // Ensure width is a number, defaults to 20
             .attr("height", d => Number(d.heights[d.instance]) || 20) // Ensure height is a number, defaults to 20
             .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10)) // Centering the rectangle
@@ -2515,8 +2621,8 @@ function updateLinksAndNodes() {
                     links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
                     
                     // Redraw the grid and nodes/links
-                    drawGrid(cur_trans);
-                    drawNodesAndLinks(cur_trans);
+                    //drawGrid(cur_trans);
+                    //drawNodesAndLinks(cur_trans);
 		}
             })
             .on("dblclick", async (event, d) => {
@@ -2525,6 +2631,8 @@ function updateLinksAndNodes() {
             });
     }
 
+
+    
     // Update rects for groupingLayer
     updateRects(groupingLayer, groupingNodes, "rgba(128, 0, 128, 0.1)", "purple", "4 2");
     updateRects(inheritedLayer, inheritedNodes, d => connectionsToColor(d.connections, transparency = 0.5) || "red", d => connectionsToColor(d.connections, transparency = 0.5) || "red", "3 3");
@@ -2546,8 +2654,8 @@ function updateLinksAndNodes() {
         .append("image")
         .attr("width",  d => d.widths[d.instance] || 40)  // Adjust width as needed
         .attr("height",  d => d.heights[d.instance] || 40) // Adjust height as needed
-        .attr("x", d => d.x_positions[d.instance] - 20)  // Adjust x position as needed
-        .attr("y", d => d.y_positions[d.instance] - 20)  // Adjust y position as needed
+        .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10))
+        .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10))
         .attr("xlink:href", d => d.imageUrl)
         .on("error", function () {
             d3.select(this).attr("xlink:href", "image-load-failed.png"); // Fallback image if link is bad
@@ -2568,8 +2676,8 @@ function updateLinksAndNodes() {
                 links = links.filter(link => link.source.id !== d.id && link.target.id !== d.id);
                 
                 // Redraw the grid and nodes/links
-                drawGrid(cur_trans);
-                drawNodesAndLinks(cur_trans);
+                //drawGrid(cur_trans);
+                //drawNodesAndLinks(cur_trans);
             }
         });
         /*.on("dblclick", async (event, d) => {
@@ -3320,18 +3428,19 @@ let cur_trans = null;
 // Initialize zoom
 const zoom = d3.zoom()
 
-      .scaleExtent([0.05, 6])
+      .scaleExtent([0.05, 15])
       .on("zoom", (event) => {
           const transform = event.transform;
 	  cur_trans = transform;
           g.attr("transform", transform);
-          drawGrid(transform);
+          //drawGrid(transform);
           saveTransformToLocalStorage(transform); // Save on zoom
       })
       .on("end", (event) => {
           const transform = event.transform;
 	  cur_trans = transform;
           drawNodesAndLinks(transform);
+	  drawGrid(transform);
           saveTransformToLocalStorage(transform); // Save on end
       });
 
@@ -3385,7 +3494,7 @@ async function handleDoubleClick(event) {
             } else {
                 await connectToNode(d.id, label);
             }
-            drawNodesAndLinks(cur_trans);
+            //drawNodesAndLinks(cur_trans);
         }
     }
 }
@@ -3412,8 +3521,8 @@ svg.call(zoom).on("dblclick.zoom", null);
 
 
 // Initial draw
-drawGrid(d3.zoomIdentity);
-drawNodesAndLinks(d3.zoomIdentity);
+//drawGrid(d3.zoomIdentity);
+//drawNodesAndLinks(d3.zoomIdentity);
 
 // Auto-save for inspector and code editor
       const inputs = document.querySelectorAll("#inspector input, #code-editor textarea, #flake-editor textarea, #test-editor table");
