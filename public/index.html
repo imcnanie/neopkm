@@ -122,11 +122,16 @@
             font-size: 1.2em;
             margin-right: 10px;
             opacity: 1;
-            transition: opacity 0.3s;
+	    filter: none;
+            transition: opacity 0.3s, filter 0.3s;
+	    
         }
-        .title-bar button.hidden {
-            opacity: 0.5;
-        }
+    .title-bar button.hidden {
+	opacity: 0.5;
+	filter: grayscale(100%);
+    }
+
+     
         #split-container {
             background-color: #f0f0f0;
             position: absolute;
@@ -151,7 +156,7 @@
             overflow: hidden;
         }
         .section {
-            display: flex;
+            display: none;
             flex-direction: column;
             border: 1px solid #444;
             overflow: hidden;
@@ -167,9 +172,13 @@
 	    text-decoration: none !important;
 
         }
+#horizontal-splitter {
+    background-color: #333;
+}
         iframe {
             flex: 1;
             border: none;
+	    display: none;
         }
         #code-editor textarea {
             width: 100%;
