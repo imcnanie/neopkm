@@ -1512,7 +1512,7 @@ async function fetchNodeConnections(nodeId) {
 */
 
 
-async function updateNodePosition(id, x, y, instance) {
+async function updateNodePositionInDB(id, x, y, instance) {
     const session = driver.session();
     try {
         // Fetch the current x_positions and y_positions arrays
@@ -2312,9 +2312,42 @@ function updateLinksAndNodes() {
             }
         });
 
+
+    // IMPORTANT: Remove redundant nodes! Why are they there in the first place?
+    nodes = nodes.reduce((accumulator, currentNode) => {
+	if (!accumulator.some(node => node.id === currentNode.id)) {
+            accumulator.push(currentNode);
+	}
+	return accumulator;
+    }, []);
+
+
+    
+    
+    
     // Separate nodes with and without image URLs
-    const nodesWithImages = nodes.filter(d => d.imageUrl);
-    const nodesWithoutImages = nodes.filter(d => !d.imageUrl);
+    //const nodesWithImages = nodes.filter(d => d.imageUrl);
+    // Default Node with to 10
+    // Perhaps faster, more logical if done in the DB
+    const DEFAULT_NODE_SIZE = [25,25]
+    const DEFAULT_IMAGE_SIZE = [60,60]
+    const nodesWithImages = nodes
+	  .filter(d => d.imageUrl)
+	  .map(d => {
+	      d.widths = d.widths.map(width => width === 0 ? DEFAULT_IMAGE_SIZE[0] : width);
+	      d.heights = d.heights.map(height => height === 0 ? DEFAULT_IMAGE_SIZE[1] : height);
+	      return d;
+	  });
+    
+    const nodesWithoutImages = nodes
+	  .filter(d => !d.imageUrl)
+	  .map(d => {
+	      d.widths = d.widths.map(width => width === 0 ? DEFAULT_NODE_SIZE[0] : width);
+	      d.heights = d.heights.map(height => height === 0 ? DEFAULT_NODE_SIZE[1] : height);
+	      return d;
+	  });
+
+    //const nodesWithoutImages = nodes.filter(d => !d.imageUrl);
 
     function updateNodePositionAndLinks(d) {
 	
@@ -2448,17 +2481,17 @@ linkSelection.enter()
 			      
 			       //d3.select(findLabel(d.label, d.instance)).remove();
 			   }*/
-			   
+			   console.log("MERP", event,d)
 			   d.x = event.x;
 			   d.y = event.y;
 
 			   //console.log(findAllLabels(d.label, d.instance))
 			   // Update the position of the dragged element
 			   d3.select(this)
-			       .attr("cx", d.x)
-			       .attr("cy", d.y)
-			       .attr("x", d.x)  // For images
-			       .attr("y", d.y); // For images
+			       .attr("cx", d.x - (d.widths[d.instance]/2) )
+			       .attr("cy", d.y - (d.heights[d.instance]/2) )
+			       .attr("x",  d.x - (d.widths[d.instance]/2) )  // For images
+			       .attr("y",  d.y - (d.heights[d.instance]/2) ); // For images
 
 			   
 			   updateNodePositionAndLinks(d);
@@ -2467,8 +2500,8 @@ linkSelection.enter()
 			   //await updateNodePosition(d.id, d.x, d.y, d.instance);
 
 			   // Update inspector with current position
-			   document.getElementById("nodeX").value = d.x;
-			   document.getElementById("nodeY").value = d.y;
+			   //document.getElementById("nodeX").value = d.x;
+			   //document.getElementById("nodeY").value = d.y;
 			   // Center view on the dragged node
 			   //svg.transition().duration(0).call(zoom.translateTo, d.x, d.y);
 			   //svg.transition()
@@ -2477,7 +2510,7 @@ linkSelection.enter()
 		       })
 		       .on("end", async function (event, d) {
 			   d3.select(this).attr("stroke", null);
-			   await updateNodePosition(d.id, d.x, d.y, d.instance);
+			   await updateNodePositionInDB(d.id, d.x, d.y, d.instance);
 
 			   //updateNodePositionAndLinks(d);
 			   //drawNodesAndLinks(cur_trans);
@@ -2575,8 +2608,8 @@ linkSelection.enter()
 
 	rect.enter()
             .append("rect")    
-            .attr("width", d => Number(d.widths[d.instance]) || 20)  // Ensure width is a number, defaults to 20
-            .attr("height", d => Number(d.heights[d.instance]) || 20) // Ensure height is a number, defaults to 20
+            .attr("width", d => Number(d.widths[d.instance]))  // Ensure width is a number, defaults to 20
+            .attr("height", d => Number(d.heights[d.instance])) // Ensure height is a number, defaults to 20
             .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10)) // Centering the rectangle
             .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10)) // Centering the rectangle
             .attr("rx", d => {
@@ -2652,13 +2685,13 @@ linkSelection.enter()
 
     image.enter()
         .append("image")
-        .attr("width",  d => d.widths[d.instance] || 40)  // Adjust width as needed
-        .attr("height",  d => d.heights[d.instance] || 40) // Adjust height as needed
+        .attr("width",  d => d.widths[d.instance])  // Adjust width as needed
+        .attr("height",  d => d.heights[d.instance]) // Adjust height as needed
         .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10))
         .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10))
         .attr("xlink:href", d => d.imageUrl)
         .on("error", function () {
-            d3.select(this).attr("xlink:href", "image-load-failed.png"); // Fallback image if link is bad
+            d3.select(this).attr("xlink:href", "images/image-load-failed.png"); // Fallback image if link is bad
 	})
         .merge(image)
         .on("mousedown", async function (event, d) {
@@ -2745,6 +2778,7 @@ async function drawNodesAndLinks(transform) {
     const y0 = -transform.y / transform.k;
     const y1 = (height - transform.y) / transform.k;
 
+    // Get nodes and links in current viewport from neo4j
     const { nodes, links } = await fetchNodesAndLinks(x0, x1, y0, y1);
 
     updateLinksAndNodes();
