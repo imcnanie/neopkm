@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>neopkm</title>
-    <script src="/d3.v6.min.js"></script>
-    <script src="/neo4j-driver"></script>
-    <script src="https://cdn.jsdelivr.net/npm/split.js/dist/split.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>	
+    <script src="js/d3.v6.min.js"></script>
+    <script src="js/neo4j-driver"></script>
+    <script src="js/split.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         html, body {
@@ -285,6 +284,11 @@
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
     cursor: col-resize;
 }
+
+  .highlight {
+            stroke: black;
+            stroke-width: 2px;
+        }
     </style>
 </head>
 <body>
@@ -940,8 +944,9 @@ const nodeLayer = g.append("g").attr("class", "nodes");
 let isDragging = false;
 let startPoint = null;
 let currentBox = null;
-    let lastClickTime = 0;
+let lastClickTime = 0;
 const doubleClickThreshold = 300;
+let lastSelectedNode = null;
 
 svg.on("mousedown", (event) => {
     if (event.ctrlKey && event.target === svg.node()) {
@@ -2521,6 +2526,7 @@ linkSelection.enter()
 			   d3.select(this).attr("stroke", null);
 			   await updateNodePositionInDB(d.id, d.x, d.y, d.instance);
 
+
 			   //updateNodePositionAndLinks(d);
 			   //drawNodesAndLinks(cur_trans);
 		       })
@@ -2639,6 +2645,14 @@ linkSelection.enter()
             .attr("stroke-dasharray", strokeDasharray)
             .on("mousedown", async function (event, d) {
 		selectNode(event, d);
+
+		// highlight last selected node
+                if (lastSelectedNode) {
+                    d3.select(lastSelectedNode).classed("highlight", false);
+                }
+                d3.select(this).classed("highlight", true);
+                lastSelectedNode = this;
+		
 		
 		const currentTime = new Date().getTime();
 		const timeSinceLastClick = currentTime - lastClickTime;
@@ -3209,6 +3223,7 @@ async function selectNode(event,d) {
 	listItem.style.borderBottom = "3px solid "+connectionsToColor(node.connections, transparency=0.5)
         listItem.addEventListener("click", async () => {
 	    svg.transition().call(zoom.translateTo, node.x_positions[node.instance], node.y_positions[node.instance]);
+	    selectNode(null, node)
         });
         connectionsToList.appendChild(listItem);
     });
@@ -3224,14 +3239,7 @@ async function selectNode(event,d) {
         listItem.addEventListener("click", async () => {
 	    console.log(node.x_positions, node.instance)
 	    svg.transition().call(zoom.translateTo, node.x_positions[node.instance], node.y_positions[node.instance]);
-	    /*                    const nodeDetails = await fetchNodeById(node.id);
-				  console.log("YO", node, nodeDetails)
-				  if (nodeDetails) {
-				  selectNode(nodeDetails);
-				  const transform = d3.zoomTransform(svg.node());
-				  console.log("F", nodeDetails.x_positions[nodeDetails.instance])
-				  svg.transition().call(zoom.translateTo, node.x_positions[node.instance], node.y_positions[node.instance]);
-				  }*/
+	    selectNode(null, node)
         });
         connectionsFromList.appendChild(listItem);
     });
@@ -3250,24 +3258,19 @@ async function selectNode(event,d) {
 		node.instance = 0;
 	    }
 	    svg.transition().call(zoom.translateTo, node.x_positions[node.instance], node.y_positions[node.instance]);
-	    /*                    const nodeDetails = await fetchNodeById(node.id);
-				  console.log("YO", node, nodeDetails)
-				  if (nodeDetails) {
-				  selectNode(nodeDetails);
-				  const transform = d3.zoomTransform(svg.node());
-				  console.log("F", nodeDetails.x_positions[nodeDetails.instance])
-				  svg.transition().call(zoom.translateTo, node.x_positions[node.instance], node.y_positions[node.instance]);
-				  }*/
+	    selectNode(null, node)
+
         });
         siblingsList.appendChild(listItem);
     });
     
     
-    console.log("EXECUTING CODE")
 
 
-if (d.label.includes(".js") && event.shiftKey) {
-    console.log("BBBBRRRU", event);
+
+    // JS Complitation from nodes
+    if (d.label.includes(".js") && event.shiftKey) {
+	console.log("EXECUTING CODE", event)
 
 
 
@@ -3496,7 +3499,7 @@ if (savedTransform) {
 
 // Function to handle double-click event
 async function handleDoubleClick(event) {
-    console.log("DOUBLE CLICK")
+    console.log("DOUBLE CLICK", event.target.localName)
     event.preventDefault();
     event.stopPropagation();
     // Get the mouse coordinates relative to the SVG element
@@ -3508,7 +3511,7 @@ async function handleDoubleClick(event) {
 	createOrphanNode(x,y);
     }
     
-    if (event.target.localName === "rect") {
+    if (event.target.localName === "rect" || event.target.localName === "image") {
 	
 	//console.log("BROH", event.target.__data__.label, g.node())
 
@@ -3781,6 +3784,7 @@ inputs.forEach(input => {
                     const zoom = d3.zoom();
 		    console.log("zooming")
                     svg.transition().call(zoom.translateTo, selectedPosition_x, selectedPosition_y);
+		    selectNode(null, nodeDetails)
                 }
             }
         }
