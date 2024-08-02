@@ -43,7 +43,8 @@ app.post('/upload', upload.single('image'), (req, res) => {
 });
 
 // Proxy route to fetch external pages
-app.get('/proxy', async (req, res) => {
+// This has problems with relative URLS TODO FIX
+/*app.get('/proxy', async (req, res) => {
     const { url } = req.query;
     if (!url) {
         return res.status(400).send('URL parameter is required');
@@ -56,7 +57,115 @@ app.get('/proxy', async (req, res) => {
         console.error('Error fetching URL:', error);
         res.status(500).send('Failed to fetch URL');
     }
+    });
+*/
+
+
+
+app.get('/proxy', async (req, res) => {
+    const { url } = req.query;
+    if (!url) {
+        return res.status(400).send('URL parameter is required');
+    }
+
+    try {
+        const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        let html = response.data;
+
+        // Base URL
+        const baseUrl = new URL(url);
+
+        // Inject JavaScript to modify URLs
+        const script = `
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    const base = "${baseUrl.href}";
+                    
+                    function toAbsoluteUrl(relativeUrl) {
+                        return new URL(relativeUrl, base).href;
+                    }
+
+                    document.querySelectorAll('a[href], link[href], img[src], script[src], form[action]').forEach(function(element) {
+                        if (element.hasAttribute('href')) {
+                            element.href = toAbsoluteUrl(element.getAttribute('href'));
+                        } else if (element.hasAttribute('src')) {
+                            element.src = toAbsoluteUrl(element.getAttribute('src'));
+                        } else if (element.hasAttribute('action')) {
+                            element.action = toAbsoluteUrl(element.getAttribute('action'));
+                        }
+                    });
+
+                    const observer = new MutationObserver(function(mutations) {
+                        mutations.forEach(function(mutation) {
+                            mutation.addedNodes.forEach(function(node) {
+                                if (node.nodeType === 1) { // Element node
+                                    if (node.hasAttribute('href')) {
+                                        node.href = toAbsoluteUrl(node.getAttribute('href'));
+                                    } else if (node.hasAttribute('src')) {
+                                        node.src = toAbsoluteUrl(node.getAttribute('src'));
+                                    } else if (node.hasAttribute('action')) {
+                                        node.action = toAbsoluteUrl(node.getAttribute('action'));
+                                    }
+                                    node.querySelectorAll('a[href], link[href], img[src], script[src], form[action]').forEach(function(element) {
+                                        if (element.hasAttribute('href')) {
+                                            element.href = toAbsoluteUrl(element.getAttribute('href'));
+                                        } else if (element.hasAttribute('src')) {
+                                            element.src = toAbsoluteUrl(element.getAttribute('src'));
+                                        } else if (element.hasAttribute('action')) {
+                                            element.action = toAbsoluteUrl(element.getAttribute('action'));
+                                        }
+                                    });
+                                }
+                            });
+                        });
+                    });
+
+                    observer.observe(document.body, { childList: true, subtree: true });
+                });
+            </script>
+        `;
+
+        // Inject the script before closing </body> tag
+        html = html.replace('</body>', `${script}</body>`);
+
+        res.send(html);
+    } catch (error) {
+        console.error('Error fetching URL:', error);
+        res.status(500).send('Failed to fetch URL');
+    }
 });
+/*
+app.get('/proxy', async (req, res) => {
+    const { url } = req.query;
+    if (!url) {
+        return res.status(400).send('URL parameter is required');
+    }
+
+    try {
+        const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        let html = response.data;
+
+        // Convert relative URLs to absolute URLs
+        const baseUrl = new URL(url);
+
+        // Handle href attributes in a, link, etc.
+        html = html.replace(/(href=")([^http][^"]*)"/g, (match, p1, p2) => `${p1}${new URL(p2, baseUrl).href}"`);
+
+        // Handle src attributes in img, script, etc.
+        html = html.replace(/(src=")([^http][^"]*)"/g, (match, p1, p2) => `${p1}${new URL(p2, baseUrl).href}"`);
+
+        // Handle action attributes in form tags
+        html = html.replace(/(action=")([^http][^"]*)"/g, (match, p1, p2) => `${p1}${new URL(p2, baseUrl).href}"`);
+        
+        // Send the modified HTML back
+        res.send(html);
+    } catch (error) {
+        console.error('Error fetching URL:', error);
+        res.status(500).send('Failed to fetch URL');
+    }
+});
+*/
+
 
 // Route to handle POST request and create a file
 app.post('/create-file', (req, res) => {
