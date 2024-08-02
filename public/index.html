@@ -286,12 +286,33 @@
 }
 
   .highlight {
-            stroke: black;
-            stroke-width: 2px;
+            stroke: white;
+            stroke-width: 1.5px;
+  }
+
+     .red-filter {
+            position: relative;
         }
+
+        .red-filter::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: red;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+        }
+    .invert-filter {
+      filter: invert(1);
+    }
+
     </style>
 </head>
-<body>
+    <body>
+    
     <svg>
         <defs>
             <marker id="arrowhead" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="6" markerHeight="6" orient="auto">
@@ -386,6 +407,9 @@
     <button onclick="toggleSection('video-container')" class="hidden">
     <img src="images/video-icon.svg" alt="video viewer" class="emoji">
     </button>
+    <button id="toggle-filter" class="hidden" onclick="document.body.classList.toggle('red-filter'); document.getElementById('inspector').classList.toggle('red-filter'); document.getElementById('horizontal-splitter').classList.toggle('red-filter'); document.getElementById('spotlightSearch').classList.toggle('red-filter'); document.getElementById('title-bar').classList.toggle('red-filter'); ">🌻</button>
+
+    <button id="toggle-filter" class="hidden" onclick="document.getElementById('webIframe').classList.toggle('invert-filter');  ">invert</button>
 
   <input type="file" id="imageInput">
   <button id="screenshot-button" onclick="uploadImage()">📷</button>
@@ -424,7 +448,7 @@
                 <iframe id="consoleContainer" src="" allowfullscreen></iframe>
             </div>
             <div id="video-container" class="section">
-    <iframe id="webIframe" src="" allowfullscreen></iframe>
+    <iframe id="webIframe" src=""  sandbox="allow-scripts allow-popups allow-same-origin"  allowfullscreen></iframe>
     <div id="player"></div>
             </div>
         </div>
@@ -435,6 +459,8 @@
         <div id="results"></div>
     </div>
 
+
+    
 
     <!-- image upload -->
       <script>
@@ -2719,6 +2745,16 @@ linkSelection.enter()
         .merge(image)
         .on("mousedown", async function (event, d) {
             selectNode(event, d);
+
+	    // highlight last selected node
+	    // TODO Highlight images when selected
+            /*    if (lastSelectedNode) {
+                    d3.select(lastSelectedNode).classed("highlight", false);
+                }
+                d3.select(this).classed("highlight", true);
+                lastSelectedNode = this;
+	    */
+	    
         })
         .call(setupDragBehavior)
         .on("contextmenu", async function (event, d) {
@@ -3525,7 +3561,7 @@ async function handleDoubleClick(event) {
 	
         if (isValidLink(label)) {
             label = await fetchPageTitle(label);
-            url = label;
+            url = userInput.label;
             // imageUrl = await getFavicon(label);
         }
 	
