@@ -8,6 +8,8 @@
     <script src="js/neo4j-driver"></script>
     <script src="js/split.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
+    
+    
     <style>
         html, body {
             height: 100%;
@@ -459,8 +461,15 @@
         <div id="results"></div>
     </div>
 
-
-    
+<!-- mathjax -->
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        }
+    });
+</script>
 
     <!-- image upload -->
       <script>
@@ -2353,6 +2362,8 @@ function updateLinksAndNodes() {
         });
 
 
+   
+    
     // IMPORTANT: Remove redundant nodes! Why are they there in the first place?
     nodes = nodes.reduce((accumulator, currentNode) => {
 	if (!accumulator.some(node => node.id === currentNode.id)) {
@@ -2448,8 +2459,49 @@ linkSelection.enter()
             });
 
 
+	
 
         // Update labels position
+
+	
+    // Update labels
+    const labels = nodeLayer.selectAll("text").data(nodes, d => d.id);
+
+    labels.exit().remove();
+
+    labels.enter()
+        .append("text")
+            .merge(labels)
+		.attr("x", d => {
+	    console.log("FK", d.widths[d.instance])
+	    if (d.widths[d.instance] === DEFAULT_NODE_SIZE[0] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[0]) {
+		return d.x_positions[d.instance] + d.widths[d.instance] / 2 + 3;
+	    } else {
+		return d.x_positions[d.instance] - d.widths[d.instance] / 2;
+	    }
+	})
+	.attr("y", d => {
+	    if (d.widths[d.instance] === DEFAULT_NODE_SIZE[1] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[1]) {
+		return d.y_positions[d.instance] + 3;
+	    } else {
+		return d.y_positions[d.instance] + d.heights[d.instance] / 2 + 15;
+	    }
+	})
+        //    .attr("x", d => d.imageUrl ? d.x_positions[d.instance] + d.widths[d.instance]/2 + 5 : d.x_positions[d.instance] + 16)  // Adjust x position based on node type
+        //.attr("y", d => d.imageUrl ? d.y_positions[d.instance] + 3 : d.y_positions[d.instance] + 3)
+        .text(d => {
+	    if (isYouTubeLink(d.url)) {
+		return `${d.label} 🎬`;  // Adds video emoji for YouTube links
+	    } else if (d.url) {
+		return `${d.label} 🌐`;  // Adds internet emoji for other links
+	    } else {
+		return d.label;
+	    }
+	}) //.text(d => d.url ? `${d.label} 🌐` : d.label) //.text(d => d.label)
+        .attr("label", d => d.label)
+        .attr("instance", d => d.instance)
+        .attr("font-size", "12px")
+        .attr("fill", "#eee")
 //        nodeLayer.selectAll("text")	
  //           .attr("x", d => d.imageUrl ? d.x_positions[d.instance] + 30 : d.x_positions[d.instance] + 10)  // Adjust x position based on node type
   //          .attr("y", d => d.imageUrl ? d.y_positions[d.instance] + 10 : d.y_positions[d.instance])
@@ -2535,6 +2587,10 @@ linkSelection.enter()
 
 			   
 			   updateNodePositionAndLinks(d);
+			   // Use MathJax to process the SVG elements
+			   //MathJax.Hub.Queue(["Typeset", MathJax.Hub, svg.node()]);
+			   
+			   
 			   //drawNodesAndLinks(cur_trans);
 			   //await updateNodePosition(d.id, d.x, d.y, d.instance);
 			   //await updateNodePosition(d.id, d.x, d.y, d.instance);
@@ -2810,8 +2866,23 @@ linkSelection.enter()
     labels.enter()
         .append("text")
         .merge(labels)
-        .attr("x", d => d.imageUrl ? d.x_positions[d.instance] + 30 : d.x_positions[d.instance] + 10)  // Adjust x position based on node type
-        .attr("y", d => d.imageUrl ? d.y_positions[d.instance] + 10 : d.y_positions[d.instance])
+	.attr("x", d => {
+	    console.log("FK", d.widths[d.instance])
+	    if (d.widths[d.instance] === DEFAULT_NODE_SIZE[0] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[0]) {
+		return d.x_positions[d.instance] + d.widths[d.instance] / 2 + 3;
+	    } else {
+		return d.x_positions[d.instance] - d.widths[d.instance] / 2;
+	    }
+	})
+	.attr("y", d => {
+	    if (d.widths[d.instance] === DEFAULT_NODE_SIZE[1] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[1]) {
+		return d.y_positions[d.instance] + 3;
+	    } else {
+		return d.y_positions[d.instance] + d.heights[d.instance] / 2 + 15;
+	    }
+	})
+        //.attr("x", d => d.imageUrl ? d.x_positions[d.instance] + d.widths[d.instance]/2 + 5 : d.x_positions[d.instance] + d.widths[d.instance]/2 + 5)  // Adjust x position based on node type
+        //.attr("y", d => d.imageUrl ? d.y_positions[d.instance] + 3: d.y_positions[d.instance] + 3 )
         .text(d => {
 	    if (isYouTubeLink(d.url)) {
 		return `${d.label} 🎬`;  // Adds video emoji for YouTube links
@@ -3641,7 +3712,7 @@ inputs.forEach(input => {
               .attr("fill", background);
 
         const labelElement = nodeLayer.selectAll("text").filter(d => d.id === id)
-              .attr("x", x + 10)
+              .attr("x", x + 20)
               .attr("y", y)
               .text(label);
 
