@@ -345,11 +345,11 @@
             <label style="width: 4em;">Y:</label>
             <input type="number" id="nodeY" style="flex: 1;">
         </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
             <label style="width: 4em;">Width:</label>
             <input type="number" id="nodeWidth" style="flex: 1;">
         </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+        <div style="display: none; align-items: center; margin-bottom: 5px;">
             <label style="width: 4em;">Height:</label>
             <input type="number" id="nodeHeight" style="flex: 1;">
         </div>
@@ -470,6 +470,111 @@
         }
     });
 </script>
+
+<!-- drag and drop new node -->
+<script>
+    // script.js
+
+document.addEventListener('DOMContentLoaded', () => {
+    const dropZone = d3.select('svg');
+    let linkProcessed = false; // Flag to ensure only one link is processed
+
+    dropZone.on('dragover', (event) => {
+        event.preventDefault();
+        dropZone.select('rect').style('stroke', '#000');
+    });
+
+    dropZone.on('dragleave', (event) => {
+        dropZone.select('rect').style('stroke', '#ccc');
+    });
+
+    dropZone.on('drop', (event) => {
+        event.preventDefault();
+        dropZone.select('rect').style('stroke', '#ccc');
+        linkProcessed = false; // Reset flag on each drop event
+
+        const dataTransfer = event.dataTransfer;
+
+        if (dataTransfer.items) {
+            // Use DataTransferItemList interface to access the file(s)
+            [...dataTransfer.items].forEach((item) => {
+		                if (item.type === "text/html" && !linkProcessed) {
+                    item.getAsString((htmlString) => {
+                        console.log(item);
+
+                        // Parse the HTML string
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlString, 'text/html');
+
+                        // Find the first <a> element and get its href attribute
+                        const linkElement = doc.querySelector('a');
+                        if (linkElement) {
+                            const link = linkElement.href;
+                            handleLinkDrop(linkElement.title || linkElement.alt, link);
+                        }
+
+                        // Find the first element with a src attribute and get its src value
+                        const srcElement = doc.querySelector('[src]');
+                        if (srcElement) {
+                            const src = srcElement.src;
+                            console.log('Src attribute:', srcElement);
+			    handleLinkDrop(srcElement.title || srcElement.alt, src);
+                            // You can handle the src attribute here if needed
+                        }
+
+                        linkProcessed = true; // Set flag to true after processing link
+                    });
+                } else if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    handleFileDrop(file);
+                }
+
+		
+            });
+        } else {
+            // Use DataTransfer interface to access the file(s)
+            [...dataTransfer.files].forEach((file) => {
+                handleFileDrop(file);
+            });
+        }
+    });
+});
+
+
+
+function handleFileDrop(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            document.getElementById('uploadStatus').innerHTML = `Upload successful! File path: ${data.filename}`;
+            createNodeAndLink(currentNode.id, currentNode.x_positions[0], currentNode.y_positions[0] + 30,
+                              data.filename, "", "/uploads/" + data.filename);
+        } else {
+            document.getElementById('uploadStatus').innerHTML = 'Upload failed!';
+        }
+    })
+    .catch(error => {
+        document.getElementById('uploadStatus').innerHTML = 'Error occurred during upload!';
+        console.error('Error:', error);
+    });
+}
+
+
+function handleLinkDrop(title,link) {
+    console.log('Link dropped:', link);
+    // Your function to handle link drops
+    createNodeAndLink(currentNode.id, currentNode.x_positions[0], currentNode.y_positions[0]+30,
+		     title, "", link);
+}
+</script>
+
 
     <!-- image upload -->
       <script>
@@ -2426,7 +2531,7 @@ linkSelection.enter()
         // Update the node's position in the nodes array
         nodes.find(n => n.id === d.id).x_positions[d.instance] = d.x;
         nodes.find(n => n.id === d.id).y_positions[d.instance] = d.y;
-	console.log(nodes.find(n => n.id === d.id));
+	//console.log(nodes.find(n => n.id === d.id));
 
         // Update the links connected to the node
         linkLayer.selectAll("line")
@@ -2473,7 +2578,7 @@ linkSelection.enter()
         .append("text")
             .merge(labels)
 		.attr("x", d => {
-	    console.log("FK", d.widths[d.instance])
+	    //console.log("FK", d.widths[d.instance])
 	    if (d.widths[d.instance] === DEFAULT_NODE_SIZE[0] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[0]) {
 		return d.x_positions[d.instance] + d.widths[d.instance] / 2 + 3;
 	    } else {
@@ -2533,7 +2638,7 @@ linkSelection.enter()
     }
 
     function findAllLabels(p) {
-    console.log(p);
+    //console.log(p);
     let label = p.label;
     let instance = p.instance;
     let xPosition = p.x_positions[instance];
@@ -2573,7 +2678,7 @@ linkSelection.enter()
 			      
 			       //d3.select(findLabel(d.label, d.instance)).remove();
 			   }*/
-			   console.log("MERP", event,d)
+			   //console.log("MERP", event,d)
 			   d.x = event.x;
 			   d.y = event.y;
 
@@ -2867,7 +2972,7 @@ linkSelection.enter()
         .append("text")
         .merge(labels)
 	.attr("x", d => {
-	    console.log("FK", d.widths[d.instance])
+	    //console.log("FK", d.widths[d.instance])
 	    if (d.widths[d.instance] === DEFAULT_NODE_SIZE[0] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[0]) {
 		return d.x_positions[d.instance] + d.widths[d.instance] / 2 + 3;
 	    } else {
@@ -3249,8 +3354,13 @@ async function selectNode(event,d) {
 	toggleSection('video-container', action="show")
 	setVideoUrl(d);
 	//setVideoTitle(d.label);
-    } else if (d.url.length > 1) {	
-	document.getElementById('webIframe').src = `/proxy?url=${d.url}`; // /proxy?url=
+    } else if (d.url.length > 1) {
+	console.log(`setting webIframe to ${d.url}`)
+	if (d.url.includes(".pdf")) {
+	    document.getElementById('webIframe').src = `${d.url}`; // /proxy?url=
+	} else {
+	    document.getElementById('webIframe').src = `/proxy?url=${d.url}`; // /proxy?url=
+	}
 	document.getElementById('webIframe').style.display = "flex";
 	document.getElementById('player').style.display = "none";
 	//restoreScrollPosition(d);    

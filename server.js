@@ -134,6 +134,9 @@ app.get('/proxy', async (req, res) => {
         res.status(500).send('Failed to fetch URL');
     }
 });
+
+
+
 /*
 app.get('/proxy', async (req, res) => {
     const { url } = req.query;
