@@ -1,0 +1,101 @@
+/* MarginaliaSearchModal_styles.css */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 0;
+}
+
+.MarginaliaSearchModal_modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.8);
+}
+
+.MarginaliaSearchModal_modal-content {
+    background-color: #1e1e1e;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 800px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.MarginaliaSearchModal_close {
+    color: #ccc;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.MarginaliaSearchModal_close:hover,
+.MarginaliaSearchModal_close:focus {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.MarginaliaSearchModal_input[type="text"] {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background-color: #2e2e2e;
+    color: #e0e0e0;
+}
+
+.MarginaliaSearchModal_button {
+    padding: 10px 20px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 4px;
+    background-color: #444;
+    color: #fff;
+    cursor: pointer;
+}
+
+.MarginaliaSearchModal_button:hover {
+    background-color: #555;
+}
+
+#MarginaliaSearchModal_results {
+    margin-top: 20px;
+}
+
+.MarginaliaSearchModal_result-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    background-color: #2e2e2e;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.MarginaliaSearchModal_result-item div {
+    flex-grow: 1;
+}
+
+.MarginaliaSearchModal_result-item h3 {
+    margin: 0 0 10px;
+}
+
+.MarginaliaSearchModal_result-item p {
+    margin: 0 0 10px;
+}
+
+.MarginaliaSearchModal_error {
+    color: red;
+    font-size: 12px;
+    display: none;
+}

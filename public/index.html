@@ -311,7 +311,25 @@
       filter: invert(1);
     }
 
-    </style>
+    .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.01); /* Transparent */
+        display: none;
+    }
+    .overlay.active {
+        display: block;
+    }
+
+</style>
+
+    <link rel="stylesheet" href="youtube_search_modal.css">
+    <link rel="stylesheet" href="MarginaliaSearchModal_styles.css">
+    
+
 </head>
     <body>
     
@@ -411,7 +429,7 @@
     </button>
     <button id="toggle-filter" class="hidden" onclick="document.body.classList.toggle('red-filter'); document.getElementById('inspector').classList.toggle('red-filter'); document.getElementById('horizontal-splitter').classList.toggle('red-filter'); document.getElementById('spotlightSearch').classList.toggle('red-filter'); document.getElementById('title-bar').classList.toggle('red-filter'); ">🌻</button>
 
-    <button id="toggle-filter" class="hidden" onclick="document.getElementById('webIframe').classList.toggle('invert-filter');  ">invert</button>
+    <button id="toggle-filter" class="hidden" onclick="document.getElementById('video-container').classList.toggle('invert-filter');  ">invert</button>
 
   <input type="file" id="imageInput">
   <button id="screenshot-button" onclick="uploadImage()">📷</button>
@@ -449,7 +467,9 @@
             <div id="console-container" class="section">
                 <iframe id="consoleContainer" src="" allowfullscreen></iframe>
             </div>
-            <div id="video-container" class="section">
+    <div id="video-container" class="section">
+    
+    <div class="overlay"></div>
     <iframe id="webIframe" src=""    allowfullscreen></iframe>
     <div id="player"></div>
             </div>
@@ -461,15 +481,32 @@
         <div id="results"></div>
     </div>
 
-<!-- mathjax -->
-    <script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        tex2jax: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['$$', '$$'], ['\\[', '\\]']]
-        }
-    });
-</script>
+    <!-- youtube popup modal on ctrl+shift+y -->
+        <div id="YoutubeSearchModal_videoModal" class="YoutubeSearchModal_modal">
+        <div class="YoutubeSearchModal_modal-content">
+            <span class="YoutubeSearchModal_close">&times;</span>
+            <input type="text" id="YoutubeSearchModal_apiKeyInput" class="YoutubeSearchModal_input" placeholder="Enter YouTube API Key">
+            <div id="YoutubeSearchModal_apiKeyError" class="YoutubeSearchModal_error"></div>
+            <input type="text" id="YoutubeSearchModal_searchInput" class="YoutubeSearchModal_input" placeholder="Search for videos...">
+            <button id="YoutubeSearchModal_searchButton" class="YoutubeSearchModal_button">Search</button>
+            <div id="YoutubeSearchModal_videoResults"></div>
+        </div>
+    </div>
+
+    <!-- Marginalia Modal ctrl+shift+m -->
+        <div id="MarginaliaSearchModal" class="MarginaliaSearchModal_modal">
+        <div class="MarginaliaSearchModal_modal-content">
+            <span class="MarginaliaSearchModal_close">&times;</span>
+            <input type="text" id="MarginaliaSearchModal_searchInput" placeholder="Search Marginalia...">
+            <button id="MarginaliaSearchModal_searchButton">Search</button>
+            <div id="MarginaliaSearchModal_results"></div>
+        </div>
+    </div>
+    
+    
+        
+    <script src="youtube_search_modal.js"></script>
+    <script src="MarginaliaSearchModal_script.js"></script>
 
 <!-- drag and drop new node -->
 <script>
@@ -697,7 +734,7 @@ var lastVideoNodeId = "";
 
 
       if (event.data == YT.PlayerState.ENDED) {
-        alert('Video has ended');
+        console.log('Video has ended');
       }
     }
 
@@ -908,9 +945,12 @@ async function evaluateJsonEntries(data, jsFunctionString) {
 const splitContainer = document.getElementById('split-container');
 const inspectorGadget = document.getElementById('inspector');
 let isDraggingTitleBar = false;
+const overlay = document.querySelector('.overlay');
+
 
 titleBar.addEventListener('mousedown', function(e) {
     isDraggingTitleBar = true;
+    overlay.classList.add('active');
     document.body.style.cursor = 'ns-resize';
 });
 
@@ -926,8 +966,10 @@ splitContainer.style.top = `${window.innerHeight-titleBar.offsetHeight}px`;
             inspectorGadget.style.maxHeight = `${newTop-titleBar.offsetHeight-10}px`
         });
 
-        document.addEventListener('mouseup', function() {
+        window.addEventListener('mouseup', function() {
             isDraggingTitleBar = false;
+	    overlay.classList.remove('active');
+	    
             document.body.style.cursor = 'default';
         });
 
@@ -1764,8 +1806,8 @@ async function updateNodeProperties(id, label, url, imageUrl, x, y, width, heigh
         let heights = node.get('heights') || [];
 
         // Update specific instance index
-        x_positions[instance] = x;
-        y_positions[instance] = y;
+        //x_positions[instance] = x;
+        //y_positions[instance] = y;
         widths[instance] = width;
         heights[instance] = height;
 
@@ -3810,21 +3852,37 @@ inputs.forEach(input => {
 	
 	console.log("UPDATING NODE", document.getElementById("nodeId"));
 	if (type === "inherited") {
-	    await updateInheritedNode(id, instance, x, y, width, height);
+	    //await updateInheritedNode(id, instance, x, y, width, height);
 	} else {
 	    await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, connectionString, background, code, flake, tests);
 	}
 
         // Update the node in the visualization
-        const node = nodeLayer.selectAll("rect").filter(d => d.id === id)
-              .attr("cx", x)
-              .attr("cy", y)
-              .attr("fill", background);
+        //const node = nodeLayer.selectAll("rect").filter(d => d.id === id)
+              //.attr("cx", x)
+              //.attr("cy", y)
+              //.attr("fill", background);
 
+	              //.attr("x", x + 20)
+        //.attr("y", y)
+	/*      .attr("x", d => {
+		  //console.log("FK", d.widths[d.instance])
+		  if (d.widths[d.instance] === DEFAULT_NODE_SIZE[0] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[0]) {
+		      return d.x_positions[d.instance] + d.widths[d.instance] / 2 + 3;
+		  } else {
+		      return d.x_positions[d.instance] - d.widths[d.instance] / 2;
+		  }
+	      })
+	      .attr("y", d => {
+		  if (d.widths[d.instance] === DEFAULT_NODE_SIZE[1] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[1]) {
+		      return d.y_positions[d.instance] + 3;
+		  } else {
+		      return d.y_positions[d.instance] + d.heights[d.instance] / 2 + 15;
+		  }
+	      })*/
+        
         const labelElement = nodeLayer.selectAll("text").filter(d => d.id === id)
-              .attr("x", x + 20)
-              .attr("y", y)
-              .text(label);
+	.text(label);
 
         // Update the links connected to the node
         linkLayer.selectAll("line").filter(d => d.source === id || d.target === id)

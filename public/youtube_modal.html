@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Search Modal</title>
+    <link rel="stylesheet" href="youtube_search_modal.css">
+</head>
+<body>
+    <div id="videoModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <input type="text" id="apiKeyInput" placeholder="Enter YouTube API Key">
+            <button id="saveApiKeyButton">Save API Key</button>
+            <input type="text" id="searchInput" placeholder="Search for videos...">
+            <button id="searchButton">Search</button>
+            <div id="videoResults"></div>
+        </div>
+    </div>
+    <script src="youtube_search_modal.js"></script>
+</body>
+</html>
+
