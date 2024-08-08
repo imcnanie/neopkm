@@ -3989,6 +3989,7 @@ inputs.forEach(input => {
                         y: node.y_positions[index],
 			width: node.widths[index],
 			height: node.heights[index],
+			imageUrl: node.imageUrl,
                         instance: index
                     }));
                 });
@@ -4008,7 +4009,17 @@ inputs.forEach(input => {
             results.forEach((result, index) => {
                 const item = document.createElement('div');
                 item.className = 'result-item';
-                item.textContent = `${result.label} [${result.instance + 1}]`;
+		item.style.display = 'flex';
+		item.style.alignItems = 'center';
+		
+		// Create the HTML content
+		let content = '';
+		if (result.imageUrl && result.imageUrl !== '') {
+		    content += `<img src="${result.imageUrl}" style="width: 50px; height: 50px; margin-right: 10px;"> `;
+		}
+		content += `<div>${result.label}</div>`;
+		
+		item.innerHTML = content;
                 item.dataset.index = index;
                 item.addEventListener('click', () => {
                     selectResult(index);
