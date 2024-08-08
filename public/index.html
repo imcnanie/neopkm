@@ -341,54 +341,11 @@
         </defs>
     </svg>
     <div id="inspector">
-        <!--<h3>Node Inspector</h3>-->
-        <input type="hidden" id="nodeId">
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Name</label>
-            <input type="text" id="nodeLabel" style="flex: 1;">
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Link</label>
-            <input type="text" id="nodeUrl" style="flex: 1;">
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Image</label>
-            <input type="text" id="nodeImageUrl" style="flex: 1;">
-        </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">X:</label>
-            <input type="number" id="nodeX" style="flex: 1;">
-        </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Y:</label>
-            <input type="number" id="nodeY" style="flex: 1;">
-        </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Width:</label>
-            <input type="number" id="nodeWidth" style="flex: 1;">
-        </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Height:</label>
-            <input type="number" id="nodeHeight" style="flex: 1;">
-        </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Instance:</label>
-            <input type="number" id="nodeInstance" style="flex: 1;">
+    <div id="propertyDiv">
     </div>
 
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Type</label>
-            <input type="text" id="nodeType" style="flex: 1;">
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Host</label>
-            <input type="text" id="connectionString" style="flex: 1;">
-        </div>
-        <div style="display: none; align-items: center; margin-bottom: 5px;">
-            <label style="width: 4em;">Background:</label>
-            <input type="text" id="nodeBackground" style="flex: 1;">
-        </div>
-        <div id="connections">
+
+    <div id="connections">
             <h4>
                 Connections To
                 <button id="linkConnectionsToButton">🔗</button>
@@ -898,7 +855,7 @@ async function evaluateJsonEntries(data, jsFunctionString) {
         json = '[{"Input":"", "Output":""}]';
     }
     
-    console.log("JSONNN", json);
+    //console.log("JSONNN", json);
     
     // Parse the JSON string safely
     let data;
@@ -1016,7 +973,7 @@ function initializeSplit() {
       last_num = -1
       function toggleSection(id, action = 'toggle') {
 	  const sections = Array.from(document.querySelectorAll('.section')).filter(section => section.style.display !== 'none');
-	  console.log(sections.length);
+	  //console.log(sections.length);
 
 	  /* automatically closing split container
 	  if (sections.length === 1 && last_num == 2) {
@@ -1784,6 +1741,7 @@ async function updateInheritedNode(id, instance, x, y, width, height) {
 }
 
 
+/*
 async function updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, connectionString, background, code, flake, tests) {
     const session = driver.session();
     
@@ -1850,14 +1808,27 @@ async function updateNodeProperties(id, label, url, imageUrl, x, y, width, heigh
         await session.close();
     }
 }
+*/
 
+function getCurrentDateWithTimezone() {
+    const date = new Date();
+    const timezoneOffset = -date.getTimezoneOffset();
+    const sign = timezoneOffset >= 0 ? '+' : '-';
+    const pad = num => String(num).padStart(2, '0');
+    const offsetHours = pad(Math.floor(Math.abs(timezoneOffset) / 60));
+    const offsetMinutes = pad(Math.abs(timezoneOffset) % 60);
+    const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${sign}${offsetHours}:${offsetMinutes}`;
+}
 
+const CURRENT_LOCATION = "Langkawi, Malaysia"
 async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
     console.log("CREATED FROM", sourceId);
     const width = 0;
     const height = 0;
     const type = "node";
     const session = driver.session();
+    
+    const date = getCurrentDateWithTimezone();
 
     // Check if a node with the same label already exists
     const existingNodeCheck = await session.run(
@@ -1887,11 +1858,13 @@ async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
              background: 'rgb(255,219,0)',
              label: $label,
              url: $url,
-             imageUrl: $imageUrl
+             imageUrl: $imageUrl,
+             date: $date,
+             location: $CURRENT_LOCATION
          })
          CREATE (source)-[:CONNECTED_TO]->(newNode)
          RETURN newNode`,
-        { sourceId, x, y, width, height, type, label, url, imageUrl }
+        { sourceId, x, y, width, height, type, label, url, imageUrl, date, CURRENT_LOCATION }
     );
 
     session.close();
@@ -2026,7 +1999,8 @@ async function createOrphanNode(x, y) {
     let imageUrl = "";
     let width = 0;  // Set default width
     let height = 0; // Set default height
-    
+    const date = new Date().toISOString();
+
     if (isValidLink(label)) {
         label = await fetchPageTitle(label);
         url = userInput.label;
@@ -2071,9 +2045,9 @@ async function createOrphanNode(x, y) {
             const type = "node"
             // Create a new node without inheriting since there's no existing node
             const result = await session.run(
-                `CREATE (newNode {id: randomUUID(), x_positions: [$x], y_positions: [$y], widths: [$width], heights: [$height], type: $type, background: 'rgb(255,219,0)', label: $newLabel, url: $url, imageUrl: $imageUrl})
+                `CREATE (newNode {id: randomUUID(), x_positions: [$x], y_positions: [$y], widths: [$width], heights: [$height], type: $type, background: 'rgb(255,219,0)', label: $newLabel, url: $url, imageUrl: $imageUrl, date: $date, location: $CURRENT_LOCATION})
                  RETURN newNode`,
-                { x, y, width, height, newLabel, url, imageUrl, type }
+                { x, y, width, height, newLabel, url, imageUrl, type, date, CURRENT_LOCATION }
             );
             session.close();
             return result.records[0].get('newNode').properties;
@@ -3350,7 +3324,7 @@ function setTableEditable(isEditable) {
 }
 
       
-function setReadOnlyFields(isReadOnly) {
+/*function setReadOnlyFields(isReadOnly) {
     document.getElementById("nodeId").readOnly = isReadOnly;
     document.getElementById("nodeLabel").readOnly = isReadOnly;
     document.getElementById("nodeUrl").readOnly = isReadOnly;
@@ -3363,7 +3337,7 @@ function setReadOnlyFields(isReadOnly) {
     document.getElementById("nodeFlake").readOnly = isReadOnly;
 
     setTableEditable(!isReadOnly);
-}
+}*/
 
       function hasCodeExtension(label) {
 	  const validExtensions = [".nix", ".py", ".sh", ".js"];
@@ -3392,6 +3366,97 @@ function setupNodeViewerWindow(d) {
 	//toggleSection('video-container', action="hide")
     }
 }
+
+
+function createInspector(d, readOnly = false) {
+    // Get the propertyDiv element
+    const propertyDiv = document.getElementById('propertyDiv');
+
+    // Clear the propertyDiv content and remove old event listeners
+    while (propertyDiv.firstChild) {
+        propertyDiv.removeChild(propertyDiv.firstChild);
+    }
+
+    // Array of blacklisted properties
+    const blacklist = ['x_positions', 'y_positions', 'widths', 'heights', 'type', 'background', 'x', 'y', 'width', 'height', 'instance', 'videoTime', 'scrollPosition', 'id', 'connections', 'code', 'flake', 'tests'];
+
+    const prefOrder = ['label', 'location', 'date', 'imageUrl', 'url'];
+
+    // Create a set to track processed keys
+    const processedKeys = new Set();
+
+    // Function to create and append input elements
+    function createInput(key, value) {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.marginBottom = '5px';
+
+        const label = document.createElement('label');
+        label.style.width = '5em';
+        label.innerText = key.charAt(0).toUpperCase() + key.slice(1);
+        div.appendChild(label);
+
+        const input = document.createElement('input');
+        input.type = typeof value === 'number' ? 'number' : 'text';
+        input.id = `node${key.charAt(0).toUpperCase() + key.slice(1)}`;
+        input.style.flex = '1';
+        input.value = value;
+        input.readOnly = readOnly;
+        div.appendChild(input);
+
+        // Add event listener to handle input changes
+        input.addEventListener('input', async (event) => {
+            const nodeId = currentNode.id;
+            const property = key;
+            const newValue = event.target.type === 'number' ? parseFloat(event.target.value) : event.target.value;
+
+            console.log(`Updating property ${property} with value ${newValue}`);
+            await updateNodeProperty(nodeId, property, newValue);
+
+	    if (property === "label") {
+		currentNode.label = newValue;
+		// Dynamically update sections based on currently input label
+		// Valid codeextensions will open more windows
+	        setupSections(newValue); 
+		const labelElement = nodeLayer.selectAll("text").filter(d => d.id === nodeId).text(newValue);
+	    }
+
+        });
+
+        propertyDiv.appendChild(div);
+    }
+
+    // Process properties in preferred order
+    prefOrder.forEach(key => {
+        if (d.hasOwnProperty(key) && !blacklist.includes(key)) {
+            createInput(key, d[key]);
+            processedKeys.add(key);
+        }
+    });
+
+    // Process remaining properties
+    for (let key in d) {
+        if (d.hasOwnProperty(key) && !blacklist.includes(key) && !processedKeys.has(key)) {
+            createInput(key, d[key]);
+        }
+    }
+}
+
+
+
+function setupSections(label) {
+    if (hasCodeExtension(label) === true) {
+	toggleSection('flake-editor', action="show")
+	toggleSection('test-editor', action="show")
+	toggleSection('console-container', action="show")
+    } else {
+	toggleSection('flake-editor', action="hide")
+	toggleSection('test-editor', action="hide")
+	toggleSection('console-container', action="hide")
+    }
+}
+
 async function selectNode(event,d) {
     
     const inspector = document.getElementById("inspector");
@@ -3403,67 +3468,40 @@ async function selectNode(event,d) {
     if (d.type === "inherited") {
 
 	inheritedProperties = await getInheritedProperties(d.id);
+
+	createInspector(inheritedProperties, readOnly=true);
 	
-	document.getElementById("nodeLabel").value = inheritedProperties.label || "";
-	document.getElementById("nodeImageUrl").value = inheritedProperties.imageUrl || "";
+	loadFromJSON(inheritedProperties.tests)
+
+	setupNodeViewerWindow(inheritedProperties);
 	document.getElementById("nodeCode").value = inheritedProperties.code || "";
 	document.getElementById("nodeFlake").value = inheritedProperties.flake || "";
-	//document.getElementById("nodeTests").value = inheritedProperties.tests || "";
-	loadFromJSON(inheritedProperties.tests)
-	document.getElementById("connectionString").value = inheritedProperties.connectionString || "";
-	setupNodeViewerWindow(inheritedProperties);
-	//document.getElementById("nodeFlake").value = await getInheritedFlake(d.id) || "";
-	//document.getElementById("connectionString").value = await getInheritedConnectionString(d.id) || "";
-	//d.label = inheritedProperties.label
-	//d.url = inheritedProperties.url
-	//d.imageUrl = inheritedProperties.imageUrl
-	
-	//d.connectionString = inheritedProperties.connectionString
-	setReadOnlyFields(true);
-    } else if (d.type === "grouping_box"){
-	document.getElementById("nodeCode").value = d.code || "";
-	document.getElementById("nodeFlake").value = d.flake || "";
 
+    } else if (d.type === "grouping_box"){
+	
+	createInspector(d);
 	setupNodeViewerWindow(d);
-	setReadOnlyFields(false);	
-    } else {
 	document.getElementById("nodeCode").value = d.code || "";
 	document.getElementById("nodeFlake").value = d.flake || "";
+    } else {
+	console.log("F",d)
+	createInspector(d);
 	loadFromJSON(d.tests);
 	setupNodeViewerWindow(d);
-	setReadOnlyFields(false);
-
+	document.getElementById("nodeCode").value = d.code || "";
+	document.getElementById("nodeFlake").value = d.flake || "";
     }
 
     
     inspector.style.display = "block";
     codeEditor.style.display = "block";
-    document.getElementById("nodeId").value = d.id;
-    currentNode = d;
-    document.getElementById("nodeLabel").value = d.label;
-    document.getElementById("nodeUrl").value = d.url;
-    document.getElementById("nodeImageUrl").value = d.imageUrl;
-    
-    if (hasCodeExtension(d.label) === true) {
-	toggleSection('flake-editor', action="show")
-	toggleSection('test-editor', action="show")
-	toggleSection('console-container', action="show")
-    } else {
-	toggleSection('flake-editor', action="hide")
-	toggleSection('test-editor', action="hide")
-	toggleSection('console-container', action="hide")
-    }
-    
-    setCodeEditorTitle(d.label);
-    document.getElementById("nodeX").value = d.x;
-    document.getElementById("nodeY").value = d.y;
-    document.getElementById("nodeWidth").value = d.width;
-    document.getElementById("nodeHeight").value = d.height;
-    document.getElementById("nodeInstance").value = d.instance; // TODO REMOVE
-    document.getElementById("nodeBackground").value = d.background; // TODO REMOVE
-    document.getElementById("nodeType").value = d.type;
-    document.getElementById("connectionString").value = d.connectionString;
 
+    // Many things rely on this
+    currentNode = d;
+
+    setupSections(d.label);
+
+    
     // Create functions for the inspector's link buttons
     const linkToButton = document.getElementById('linkConnectionsToButton');
     linkToButton.onclick = () => {
@@ -3845,60 +3883,78 @@ svg.call(zoom).on("dblclick.zoom", null);
 //drawNodesAndLinks(d3.zoomIdentity);
 
 // Auto-save for inspector and code editor
-      const inputs = document.querySelectorAll("#inspector input, #code-editor textarea, #flake-editor textarea, #test-editor table");
+const inputs = document.querySelectorAll("#code-editor textarea, #flake-editor textarea, #test-editor table");
+
+inputs.forEach(input => {
+    input.addEventListener("input", async (event) => {
+        console.log("input");
+
+        const nodeId = currentNode.id;
+        
+        let propertyName;
+	console.log(event)
+        switch (event.target.id) {
+            case "nodeCode":
+                propertyName = "code";
+                break;
+            case "flakeCode":
+                propertyName = "flake";
+                break;
+            default:
+	        break;
+        }
+
+        console.log("UPDATING NODE", nodeId, "PROPERTY", propertyName, "VAL", event.target.value);
+
+        if (currentNode.type !== "inherited" && event.target.localName !== "td") {
+            await updateNodeProperty(currentNode.id, propertyName, event.target.value);
+        }
+
+	// Update tests
+	if (event.target.localName === "td") {
+	    const tests = convertTableToJSONString();
+	    console.log(tests)
+            await updateNodeProperty(currentNode.id, "tests", tests);
+	}
+    });
+});
+
+
+
+
+/*const inputs = document.querySelectorAll("#propertyDiv input, #code-editor textarea, #flake-editor textarea, #test-editor table");
 inputs.forEach(input => {
     input.addEventListener("input", async () => {
 	console.log("input");
-        const id = document.getElementById("nodeId").value;
-        const label = document.getElementById("nodeLabel").value;
-	const url = document.getElementById("nodeUrl").value;
-	const imageUrl = document.getElementById("nodeImageUrl").value;
-        const x = parseFloat(document.getElementById("nodeX").value);
-        const y = parseFloat(document.getElementById("nodeY").value);
-	const width = parseFloat(document.getElementById("nodeWidth").value);
-	const height = parseFloat(document.getElementById("nodeHeight").value);
-	const instance = parseFloat(document.getElementById("nodeInstance").value);
-        const background = document.getElementById("nodeBackground").value;
-	const type = document.getElementById("nodeType").value;
-	const connectionString = document.getElementById("connectionString").value;
-        const code = document.getElementById("nodeCode").value;
-	const flake = document.getElementById("nodeFlake").value;
-	const tests = convertTableToJSONString();
+	
+        const label = document.getElementById("label").value;
+	//const url = document.getElementById("nodeUrl").value;
+	//const imageUrl = document.getElementById("nodeImageUrl").value;
+        //const x = parseFloat(document.getElementById("nodeX").value);
+        //const y = parseFloat(document.getElementById("nodeY").value);
+	//const width = parseFloat(document.getElementById("nodeWidth").value);
+	//const height = parseFloat(document.getElementById("nodeHeight").value);
+	//const instance = parseFloat(document.getElementById("nodeInstance").value);
+        //const background = document.getElementById("nodeBackground").value;
+	//const type = document.getElementById("nodeType").value;
+	//const connectionString = document.getElementById("connectionString").value;
+        //const code = document.getElementById("nodeCode").value;
+	//const flake = document.getElementById("nodeFlake").value;
+	//const tests = convertTableToJSONString();
 	
 	console.log("UPDATING NODE", document.getElementById("nodeId"));
 	if (type === "inherited") {
 	    //await updateInheritedNode(id, instance, x, y, width, height);
 	} else {
-	    await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, connectionString, background, code, flake, tests);
+	    await updateNodeProperty(currentNode.id, "label", currentNode.label);
+	    
+	    //await updateNodeProperties(id, label, url, imageUrl, x, y, width, height, instance, type, connectionString, background, code, flake, tests);
 	}
-
-        // Update the node in the visualization
-        //const node = nodeLayer.selectAll("rect").filter(d => d.id === id)
-              //.attr("cx", x)
-              //.attr("cy", y)
-              //.attr("fill", background);
-
-	              //.attr("x", x + 20)
-        //.attr("y", y)
-	/*      .attr("x", d => {
-		  //console.log("FK", d.widths[d.instance])
-		  if (d.widths[d.instance] === DEFAULT_NODE_SIZE[0] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[0]) {
-		      return d.x_positions[d.instance] + d.widths[d.instance] / 2 + 3;
-		  } else {
-		      return d.x_positions[d.instance] - d.widths[d.instance] / 2;
-		  }
-	      })
-	      .attr("y", d => {
-		  if (d.widths[d.instance] === DEFAULT_NODE_SIZE[1] || d.widths[d.instance] === DEFAULT_IMAGE_SIZE[1]) {
-		      return d.y_positions[d.instance] + 3;
-		  } else {
-		      return d.y_positions[d.instance] + d.heights[d.instance] / 2 + 15;
-		  }
-	      })*/
+	
         
         const labelElement = nodeLayer.selectAll("text").filter(d => d.id === id)
-	.text(label);
-
+	      .text(label);
+	
         // Update the links connected to the node
         linkLayer.selectAll("line").filter(d => d.source === id || d.target === id)
             .attr("x1", d => nodes.find(n => n.id === d.source).x)
@@ -3906,7 +3962,24 @@ inputs.forEach(input => {
             .attr("x2", d => nodes.find(n => n.id === d.target).x)
             .attr("y2", d => nodes.find(n => n.id === d.target).y);
     });
-});
+    });
+*/
+/*async function updateNodeProperty(id, property, value) {
+    const session = driver.session();
+    
+    try {
+        const query = `MATCH (n {id: $id})
+                       SET n.${property} = $value`;
+        const params = { id, value };
+
+        await session.run(query, params);
+    } finally {
+        await session.close();
+    }
+}*/
+
+
+
     </script>
 
 
