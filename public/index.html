@@ -1283,7 +1283,6 @@ async function fetchFirstInstanceNodesAndLinks(x0, x1, y0, y1) {
 }
 
 
-
 async function fetchNodesAndLinks(x0, x1, y0, y1) {
     const session = driver.session();
     const result = await session.run(
@@ -2941,11 +2940,16 @@ linkSelection.enter()
         .attr("height",  d => d.heights[d.instance]) // Adjust height as needed
         .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10))
         .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10))
-        .attr("xlink:href", d => d.imageUrl)
+          .attr("xlink:href", d => d.imageUrl)
+	  .attr("stroke", d => connectionsToColor(d.connections) || "red", "none", "none")
+	  .attr("stroke-dasharray", "3 3")
+
         .on("error", function () {
             d3.select(this).attr("xlink:href", "images/image-load-failed.png"); // Fallback image if link is bad
 	})
         .merge(image)
+    
+        .style("filter", d => `drop-shadow(0px 0px 3px ${connectionsToColor(d.connections) || "red"})`)
         .on("mousedown", async function (event, d) {
             selectNode(event, d);
 
@@ -3367,11 +3371,69 @@ function setReadOnlyFields(isReadOnly) {
       }
 
       
-      
+
+function setupNodeViewerWindow(d) {
+    if (isYouTubeLink(d.url) === true) {
+	toggleSection('video-container', action="show")
+	setVideoUrl(d);
+	//setVideoTitle(d.label);
+    } else if (d.url.length > 1) {
+	console.log(`setting webIframe to ${d.url}`)
+	if (d.url.includes(".pdf")) {
+	    
+	    document.getElementById('webIframe').src = `${d.url}`; // /proxy?url=
+	} else {
+	    document.getElementById('webIframe').src = `/proxy?url=${d.url}`; // /proxy?url=
+	}
+	document.getElementById('webIframe').style.display = "flex";
+	document.getElementById('player').style.display = "none";
+	//restoreScrollPosition(d);    
+    } else {
+	//toggleSection('video-container', action="hide")
+    }
+}
 async function selectNode(event,d) {
     
     const inspector = document.getElementById("inspector");
     const codeEditor = document.getElementById("code-editor");
+    let inheritedProperties;
+    
+
+    // TODO modify this to inherit EVERYTHING at once
+    if (d.type === "inherited") {
+
+	inheritedProperties = await getInheritedProperties(d.id);
+	
+	document.getElementById("nodeLabel").value = inheritedProperties.label || "";
+	document.getElementById("nodeImageUrl").value = inheritedProperties.imageUrl || "";
+	document.getElementById("nodeCode").value = inheritedProperties.code || "";
+	document.getElementById("nodeFlake").value = inheritedProperties.flake || "";
+	//document.getElementById("nodeTests").value = inheritedProperties.tests || "";
+	loadFromJSON(inheritedProperties.tests)
+	document.getElementById("connectionString").value = inheritedProperties.connectionString || "";
+	setupNodeViewerWindow(inheritedProperties);
+	//document.getElementById("nodeFlake").value = await getInheritedFlake(d.id) || "";
+	//document.getElementById("connectionString").value = await getInheritedConnectionString(d.id) || "";
+	//d.label = inheritedProperties.label
+	//d.url = inheritedProperties.url
+	//d.imageUrl = inheritedProperties.imageUrl
+	
+	//d.connectionString = inheritedProperties.connectionString
+	setReadOnlyFields(true);
+    } else if (d.type === "grouping_box"){
+	document.getElementById("nodeCode").value = d.code || "";
+	document.getElementById("nodeFlake").value = d.flake || "";
+
+	setupNodeViewerWindow(d);
+	setReadOnlyFields(false);	
+    } else {
+	document.getElementById("nodeCode").value = d.code || "";
+	document.getElementById("nodeFlake").value = d.flake || "";
+	loadFromJSON(d.tests);
+	setupNodeViewerWindow(d);
+	setReadOnlyFields(false);
+
+    }
 
     
     inspector.style.display = "block";
@@ -3392,24 +3454,6 @@ async function selectNode(event,d) {
 	toggleSection('console-container', action="hide")
     }
     
-    if (isYouTubeLink(d.url) === true) {
-	toggleSection('video-container', action="show")
-	setVideoUrl(d);
-	//setVideoTitle(d.label);
-    } else if (d.url.length > 1) {
-	console.log(`setting webIframe to ${d.url}`)
-	if (d.url.includes(".pdf")) {
-	    document.getElementById('webIframe').src = `${d.url}`; // /proxy?url=
-	} else {
-	    document.getElementById('webIframe').src = `/proxy?url=${d.url}`; // /proxy?url=
-	}
-	document.getElementById('webIframe').style.display = "flex";
-	document.getElementById('player').style.display = "none";
-	//restoreScrollPosition(d);    
-    } else {
-	//toggleSection('video-container', action="hide")
-    }
-
     setCodeEditorTitle(d.label);
     document.getElementById("nodeX").value = d.x;
     document.getElementById("nodeY").value = d.y;
@@ -3419,35 +3463,6 @@ async function selectNode(event,d) {
     document.getElementById("nodeBackground").value = d.background; // TODO REMOVE
     document.getElementById("nodeType").value = d.type;
     document.getElementById("connectionString").value = d.connectionString;
-
-    // TODO modify this to inherit EVERYTHING at once
-    if (d.type === "inherited") {
-
-	inheritedProperties = await getInheritedProperties(d.id);
-	
-	document.getElementById("nodeLabel").value = inheritedProperties.label || "";
-	document.getElementById("nodeImageUrl").value = inheritedProperties.imageUrl || "";
-	document.getElementById("nodeCode").value = inheritedProperties.code || "";
-	document.getElementById("nodeFlake").value = inheritedProperties.flake || "";
-	//document.getElementById("nodeTests").value = inheritedProperties.tests || "";
-	loadFromJSON(inheritedProperties.tests)
-	document.getElementById("connectionString").value = inheritedProperties.connectionString || "";
-
-	//document.getElementById("nodeFlake").value = await getInheritedFlake(d.id) || "";
-	//document.getElementById("connectionString").value = await getInheritedConnectionString(d.id) || "";
-	setReadOnlyFields(true);
-    } else if (d.type === "grouping_box"){
-	document.getElementById("nodeCode").value = d.code || "";
-	document.getElementById("nodeFlake").value = d.flake || "";
-
-	setReadOnlyFields(false);	
-    } else {
-	document.getElementById("nodeCode").value = d.code || "";
-	document.getElementById("nodeFlake").value = d.flake || "";
-	loadFromJSON(d.tests)
-	setReadOnlyFields(false);
-
-    }
 
     // Create functions for the inspector's link buttons
     const linkToButton = document.getElementById('linkConnectionsToButton');

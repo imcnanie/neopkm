@@ -3,6 +3,7 @@ const multer = require('multer');
 const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 
 
 const app = express();
@@ -69,7 +70,14 @@ app.get('/proxy', async (req, res) => {
     }
 
     try {
-        const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        //const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+	const response = await axios.get(url, { //ignore certificate errors not very smart
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            httpsAgent: new https.Agent({
+                rejectUnauthorized: false
+            })
+        });
+
         let html = response.data;
 
         // Base URL
