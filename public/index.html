@@ -21,6 +21,27 @@
             display: flex;
             flex-direction: column;
         }
+
+/* Thin dark scrollbars */
+::-webkit-scrollbar {
+  width: 8px; /* Change this to make the scrollbar thicker or thinner */
+  height: 8px; /* Change this to make the scrollbar thicker or thinner */
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #888; /* Change this to your preferred scrollbar color */
+  border-radius: 10px;
+  border: 2px solid #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
         svg {
             width: 100%;
             height: 100%;
@@ -179,7 +200,7 @@
         iframe {
             flex: 1;
             border: none;
-	    display: none;
+	    //display: none;
         }
         #code-editor textarea {
             width: 100%;
@@ -650,7 +671,7 @@ var lastVideoNodeId = "";
 	  lastVideoNodeId = currentNode.id;
 
 	  console.log(document.getElementById('player'))
-	document.getElementById('webIframe').style.display = "none";
+	  document.getElementById('webIframe').style.display = "none";
 	  document.getElementById('player').style.display = "flex";
 	  
 	startTime = parseFloat(time);
@@ -3231,9 +3252,43 @@ async function writeFileToRemote(connectionString, remotePath, fileContent) {
   }
 }
 
+// Function to check if connection string is defined and prompt user if not
+async function checkAndUpdateNodeConnectionString(nodeId) {
+    const property = "connectionString";
+    let connString =  document.getElementById("nodeConnectionString").value; //currentNode.connectionString;
 
-function runCommand() {
-    const connString = document.getElementById("connectionString").value;
+    if (connString) {
+        // Return the existing connection string if it is already defined
+        return connString;
+    }
+
+    // Prompt the user to create a connection string if it is undefined
+    const userInput = prompt("The connection string is undefined. Please create it:");
+
+    // If the user provides input, set it to the connString
+    if (userInput) {
+        connString = userInput;
+        // Proceed with updating the node property with the new connection string
+        try {
+            await updateNodeProperty(nodeId, property, connString);
+            alert("Node property updated successfully.");
+            return connString; // Return the new connection string
+        } catch (error) {
+            console.error("Error updating node property:", error);
+            alert("Failed to update node property.");
+            return null; // Indicate that there was an error
+        }
+    } else {
+        // If the user cancels or doesn't provide input, return without updating the property
+        alert("Operation cancelled. Connection string is required.");
+        return null; // Indicate that the operation was cancelled
+    }
+}
+
+
+
+async function runCommand() {
+    const connString = await checkAndUpdateNodeConnectionString(currentNode.id)
     const nodeLabel = document.getElementById("nodeLabel").value;
     const nodeCode = document.getElementById("nodeCode").value;
     const nodeFlake = document.getElementById("nodeFlake").value;
@@ -3897,7 +3952,7 @@ inputs.forEach(input => {
             case "nodeCode":
                 propertyName = "code";
                 break;
-            case "flakeCode":
+            case "nodeFlake":
                 propertyName = "flake";
                 break;
             default:
@@ -3907,6 +3962,7 @@ inputs.forEach(input => {
         console.log("UPDATING NODE", nodeId, "PROPERTY", propertyName, "VAL", event.target.value);
 
         if (currentNode.type !== "inherited" && event.target.localName !== "td") {
+
             await updateNodeProperty(currentNode.id, propertyName, event.target.value);
         }
 

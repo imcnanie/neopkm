@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Marginalia API call
     function searchMarginalia(query) {
-        const apiKey = 'testing1234'; // Replace with your own API key if needed
+        const apiKey = localStorage.getItem('marginaliaApiKey') || localStorage.setItem('marginaliaApiKey', prompt('Please enter your Marginalia API key:')); // Replace with your own API key if needed
         const apiURL = `/proxy?url=https://api.marginalia.nu/${apiKey}/search/${query}`;
 
         fetch(apiURL)
