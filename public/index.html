@@ -606,12 +606,98 @@ iframe, webview {
     <script src="youtube_search_modal.js"></script>
     <script src="MarginaliaSearchModal_script.js"></script>
 
+    <!-- neopkm_config node for saving various states of UI elements -->
+    <script>
+    async function updateConfigNodeProperty(property, value) {
+	const session = driver.session();
+	
+	try {
+            const result = await session.run(
+		`
+            MATCH (n { label: ".neopkm_config" })
+            SET n.\`${property}\` = $value
+            RETURN n
+            `,
+		{ value }
+            );
+	    
+            // Check if a node was returned
+            if (result.records.length > 0) {
+		console.log("Node updated:", result.records[0].get('n').properties);
+            } else {
+		console.log("No node found with label '.neopkm_config'");
+            }
+	} catch (error) {
+            console.error("Error updating node:", error);
+	} finally {
+            // Close the session
+            await session.close();
+	}
+    }
+
+
+
+
+async function getNodeProperties() {
+    const session = driver.session();
+    try {
+        const result = await session.run(
+            `
+            MATCH (n { label: ".neopkm_config" })
+            RETURN n
+            `
+        );
+
+        // Check if a node was found and returned
+        if (result.records.length > 0) {
+            const node = result.records[0].get('n');
+            console.log("Node properties:", node.properties);
+            return node.properties;
+        } else {
+            console.log("No node found with label '.neopkm_config'");
+            return null;
+        }
+    } catch (error) {
+        console.error("Error retrieving node properties:", error);
+    } finally {
+        // Close the session
+        await session.close();
+    }
+}
+
+
+
+
+
+
+async function loadUIStateFromConfigNode() {
+    
+    // finds all the node properties and sets them up
+    getNodeProperties().then((properties) => {
+	if (properties) {
+            // Do something with the properties, if needed
+	    console.log(properties);
+	    console.log("SETTING TITLEBAR POSITION", properties.titlebar_position);
+	    const titleBar = document.getElementById('title-bar');
+
+	    setTitleBarPosition(titleBar,properties.titlebar_position)
+	}
+	
+    });
+    
+    
+    
+    }
+
+</script>
+    
     <!-- webview and tabs -->
 <script>
 
 
 window.DarkReader = require('darkreader');
-function createWebView(src) {                                                                                                                                                                                      
+  function createWebView(d) {
+      src = d.url
     // Check if a tab with the same src already exists                                                                                                                                                             
     const tabs = document.getElementById('tabs');                                                                                                                                                                  
     const existingTabButton = Array.from(tabs.children).find(button => button.dataset.src === src);                                                                                                                
@@ -661,18 +747,19 @@ function createWebView(src) {
     tabButton.style.display = 'inline-block';                                                                                                                                                                      
     tabButton.style.padding = '10px';                                                                                                                                                                              
     tabButton.style.border = '1px solid #ccc';                                                                                                                                                                     
-    tabButton.style.borderBottom = 'none';                                                                                                                                                                         
+    //tabButton.style.borderBottom = 'none';                                                                                                                                                                         
     tabButton.style.backgroundColor = '#555';                                                                                                                                                                      
   tabButton.style.cursor = 'pointer';                                                                                                                                                                            
                                                                                                                                                                                                                    
     // Fetch the title from the webview                                                                                                                                                                            
-    webview.addEventListener('did-finish-load', () => {                                                                                                                                                            
+    /*webview.addEventListener('did-finish-load', () => {                                                                                                                                                            
         webview.executeJavaScript('document.title').then(title => {                                                                                                                                                
             tabButton.textContent = title || hostname;                                                                                                                                                             
         }).catch(() => {                                                                                                                                                                                           
             tabButton.textContent = hostname;                                                                                                                                                                      
         });                                                                                                                                                                                                        
-    });                                                                                                                                                                                                            
+	});*/
+        tabButton.textContent = d.label;
                                                                                                                                                                                                                    
     // Toggle visibility of the corresponding webview on click                                                                                                                                                     
     tabButton.addEventListener('click', () => {                                                                                                                                                                    
@@ -1201,32 +1288,40 @@ const splitContainer = document.getElementById('split-container');
 const inspectorGadget = document.getElementById('inspector');
 let isDraggingTitleBar = false;
 const overlay = document.querySelector('.overlay');
+      let newTop;
 
 
-titleBar.addEventListener('mousedown', function(e) {
-    isDraggingTitleBar = true;
-    overlay.classList.add('active');
-    document.body.style.cursor = 'ns-resize';
-});
-
-inspectorGadget.style.maxHeight = `${window.innerHeight-titleBar.offsetHeight-10}px`
-splitContainer.style.top = `${window.innerHeight-titleBar.offsetHeight}px`;
-        window.addEventListener('mousemove', function(e) {
-            if (!isDraggingTitleBar) return;
-            let newTop  = e.clientY - titleBar.offsetHeight/2.0;
-
-            if (newTop < 0) newTop = 0;
-            if (newTop > window.innerHeight-titleBar.offsetHeight) newTop = window.innerHeight-titleBar.offsetHeight;
-            splitContainer.style.top = `${newTop}px`;
-            inspectorGadget.style.maxHeight = `${newTop-titleBar.offsetHeight-10}px`
-        });
-
-        window.addEventListener('mouseup', function() {
-            isDraggingTitleBar = false;
-	    overlay.classList.remove('active');
-	    
-            document.body.style.cursor = 'default';
-        });
+function setTitleBarPosition(titleBar, pos) {
+          splitContainer.style.top = `${pos}px`;
+          inspectorGadget.style.maxHeight = `${pos-titleBar.offsetHeight-10}px`
+      }
+      
+      titleBar.addEventListener('mousedown', function(e) {
+	  isDraggingTitleBar = true;
+	  overlay.classList.add('active');
+	  document.body.style.cursor = 'ns-resize';
+      });
+      
+      inspectorGadget.style.maxHeight = `${window.innerHeight-titleBar.offsetHeight-10}px`
+      splitContainer.style.top = `${window.innerHeight-titleBar.offsetHeight}px`;
+      window.addEventListener('mousemove', function(e) {
+          if (!isDraggingTitleBar) return;
+          newTop  = e.clientY - titleBar.offsetHeight/2.0;
+	  
+          if (newTop < 0) newTop = 0;
+          if (newTop > window.innerHeight-titleBar.offsetHeight) newTop = window.innerHeight-titleBar.offsetHeight;
+          //splitContainer.style.top = `${newTop}px`;
+          //inspectorGadget.style.maxHeight = `${newTop-titleBar.offsetHeight-10}px`
+	  setTitleBarPosition(titleBar, newTop)
+      });
+      
+      window.addEventListener('mouseup', function() {
+          isDraggingTitleBar = false;
+	  overlay.classList.remove('active');
+	  
+          document.body.style.cursor = 'default';
+	  updateConfigNodeProperty("titlebar_position", newTop)
+      });
 
 
 
@@ -3688,7 +3783,7 @@ function setupNodeViewerWindow(d) {
     } else if (d.url.length > 1) {
 	//toggleSection('web-container', action="show")
 
-	createWebView(d.url)
+	createWebView(d)
 	/*
 	console.log(`setting webviewElement to ${d.url}`)
 	if (d.url.includes(".pdf")) {
@@ -4323,7 +4418,11 @@ inputs.forEach(input => {
 
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', () => {
+      //reset all windows
+      loadUIStateFromConfigNode();
+
+      
         const searchInput = document.getElementById('searchInput');
         const searchTitle = document.getElementById('searchTitle');
         const resultsContainer = document.getElementById('results');
