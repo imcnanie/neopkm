@@ -15,7 +15,8 @@
             height: 100%;
             margin: 0;
             overflow: hidden;
-            background-color: #121212;
+            /*background-color: #121212;*/
+	    background-color #000;
             color: #e0e0e0;
             font-family: 'Arial', sans-serif;
             display: flex;
@@ -29,23 +30,24 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e1e1e;
+    background: #000; /*#1e1e1e;*/
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #888; /* Change this to your preferred scrollbar color */
+  background-color: #cc0000 /*#888;*/ /* Change this to your preferred scrollbar color */
   border-radius: 10px;
-  border: 2px solid #1e1e1e;
+  border: 2px solid #000; /*#1e1e1e;*/
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+    background: #ff0000;/*#555;*/
 }
 
         svg {
             width: 100%;
             height: 100%;
-            background-color: #1e1e1e;
+            /*background-color: #1e1e1e;*/
+	    background-color: #000;
             cursor: grab;
             border-bottom: 1px solid #333;
         }
@@ -59,8 +61,8 @@
             top: 10px;
             right: 10px;
             width: 250px;
-            background: #1e1e1e;
-            border: 1px solid #333;
+            background: #000; /*#1e1e1e;*/
+            border: 1px solid #000; /*1px solid #333;*/
             padding: 15px;
             display: none;
             border-radius: 8px;
@@ -82,7 +84,7 @@
             width: 100%;
             margin-bottom: 10px;
             padding: 5px;
-            background: #333;
+            background: #000; /*#333;*/
             border: 1px solid #555;
             color: #e0e0e0;
             border-radius: 4px;
@@ -124,7 +126,7 @@
             background-color: #333;
         }
         .title-bar {
-            background-color: #333;
+            background-color: #000; /*#333;*/
             color: #ccc;
             display: flex;
             align-items: center;
@@ -150,7 +152,7 @@
         }
     .title-bar button.hidden {
 	opacity: 0.5;
-	filter: grayscale(100%);
+	/*filter: grayscale(100%);*/
     }
 
      
@@ -178,7 +180,7 @@
             overflow: hidden;
         }
         .section {
-            display: none;
+            /*display: none;*/
             flex-direction: column;
             border: 1px solid #444;
             overflow: hidden;
@@ -198,7 +200,7 @@
     background-color: #333;
 }
 iframe, webview {
-            flex: 1;
+            //flex: 1;
             border: none;
 	    //display: none;
         }
@@ -253,7 +255,7 @@ iframe, webview {
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
             width: 400px;
             padding: 20px;
-            z-index: 1000;
+            z-index: 10000;
         }
         #searchTitle {
             margin-bottom: 10px;
@@ -315,7 +317,8 @@ iframe, webview {
   }
 
      .red-filter {
-            position: relative;
+        position: relative;
+	z-index:6666;
         }
 
         .red-filter::before {
@@ -327,7 +330,10 @@ iframe, webview {
             height: 100%;
             background: red;
             mix-blend-mode: multiply;
-            pointer-events: none;
+        pointer-events: none;
+	filter: brightness(50%);
+	background-color #000;
+	
         }
     .invert-filter {
       filter: invert(1);
@@ -346,7 +352,7 @@ iframe, webview {
         display: block;
     }
     #video-container {
-	flex-direction: row;
+	/*flex-direction: row;*/
     }
 
     #web-container {
@@ -357,13 +363,13 @@ iframe, webview {
 
 /* Base tab styling */
 .tab-button {
-    background-color: #282828;  /* Darker background for dark mode */
+    background-color: #000;  /* Darker background for dark mode */
     color: #b3b3b3;  /* Softer light text for better readability */
     border-radius: 12px;  /* Slightly smaller rounded corners */
     font-size: 10px;  /* Smaller font size */
     width: 140px;  /* Slightly narrower for a sleeker look */
-    padding: 6px 12px;  /* Adjusted padding for better text fit */
-    border: 1px solid #555;  /* Subtle contrast for the border */
+    /*padding: 6px 12px;*/  /* Adjusted padding for better text fit */
+    border: 0px solid #555;  /* Subtle contrast for the border */
     margin-right: 6px;  /* Reduced space between tabs */
     cursor: pointer;
     text-align: center;  /* Center the text */
@@ -381,57 +387,9 @@ iframe, webview {
 
 /* Active tab styling */
 .tab-button.active {
-    background-color: #4a4a4a;  /* Slightly lighter for active tab */
+    background-color: #222;  /* Slightly lighter for active tab */
     color: #f0f0f0;  /* Brighter text for active tab */
-    border: 1px solid #4a4a4a;
-}
-
-/* Flash effect */
-.flash {
-    animation: flash 1s;
-}
-
-@keyframes flash {
-    0% { background-color: #4a4a4a; }
-    50% { background-color: #5a5a5a; }
-    100% { background-color: #4a4a4a; }
-}
-
-/* Optional: to handle overflow, you can add this */
-#tabs {
-    overflow-x: auto;
-    white-space: nowrap;
-}
-
-/* Base tab styling */
-.tab-button {
-    background-color: #282828;  /* Dark background for dark mode */
-    color: #b3b3b3;  /* Softer light text for better readability */
-    border-radius: 12px;  /* Rounded corners on all sides */
-    font-size: 10px;  /* Smaller font size */
-    width: 140px;  /* Consistent width for all tabs */
-    padding: 6px 12px;
-    border: 1px solid #555;  /* Slightly lighter border for contrast */
-    margin-right: 6px;  /* Space between tabs */
-    cursor: pointer;
-    text-align: center;  /* Center the text */
-    overflow: hidden;  /* Prevent text overflow */
-    text-overflow: ellipsis;  /* Add ellipsis if text overflows */
-    white-space: nowrap;  /* Prevent text wrapping */
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-/* Hover effect */
-.tab-button:hover {
-    background-color: #3a3a3a;  /* Slightly lighter on hover */
-    color: #e0e0e0;  /* Brighter text on hover */
-}
-
-/* Active tab styling */
-.tab-button.active {
-    background-color: #4a4a4a;  /* Even lighter for active tab */
-    color: #f0f0f0;
-    border: 1px solid #4a4a4a;
+    /*border: 1px solid #4a4a4a;*/
 }
 
 /* Flash effect */
@@ -521,7 +479,7 @@ iframe, webview {
     <button onclick="toggleSection('web-container')" class="hidden">
     🌐
     </button>
-    <button id="toggle-filter" class="hidden" onclick="document.body.classList.toggle('red-filter'); document.getElementById('inspector').classList.toggle('red-filter'); document.getElementById('horizontal-splitter').classList.toggle('red-filter'); document.getElementById('spotlightSearch').classList.toggle('red-filter'); document.getElementById('title-bar').classList.toggle('red-filter'); ">🌻</button>
+    <button id="toggle-filter" class="hidden" onclick="document.body.classList.toggle('red-filter'); document.getElementById('inspector').classList.toggle('red-filter'); document.getElementById('horizontal-splitter').classList.toggle('red-filter'); document.getElementById('spotlightSearch').classList.toggle('red-filter'); document.getElementById('title-bar').classList.toggle('red-filter'); document.querySelectorAll('.title-bar button').forEach(button => button.classList.toggle('red-filter'));">🌻</button>
 
     <button id="toggle-filter" class="hidden" onclick="document.getElementById('video-container').classList.toggle('invert-filter');document.getElementById('web-container').classList.toggle('invert-filter');  ">invert</button>
 
@@ -569,7 +527,6 @@ iframe, webview {
 	      <div class="overlay"></div>    <!-- this way we can drag over iframes without problems -->
 	      <div id="player"></div>
 	    </div>
-
 	    
         </div>
     </div>
@@ -608,7 +565,8 @@ iframe, webview {
 
     <!-- neopkm_config node for saving various states of UI elements -->
     <script>
-    async function updateConfigNodeProperty(property, value) {
+      async function updateConfigNodeProperty(property, value) {
+
 	const session = driver.session();
 	
 	try {
@@ -677,10 +635,13 @@ async function loadUIStateFromConfigNode() {
 	if (properties) {
             // Do something with the properties, if needed
 	    console.log(properties);
-	    console.log("SETTING TITLEBAR POSITION", properties.titlebar_position);
+	    
 	    const titleBar = document.getElementById('title-bar');
 
 	    setTitleBarPosition(titleBar,properties.titlebar_position)
+	    
+	    processSectionsJSON(properties.sectionState);
+	    
 	}
 	
     });
@@ -692,12 +653,13 @@ async function loadUIStateFromConfigNode() {
 </script>
     
     <!-- webview and tabs -->
-<script>
+    <script>
+
+
 
 
 window.DarkReader = require('darkreader');
-  function createWebView(d) {
-      src = d.url
+      function createWebView(title, src, initialize=false, display="flex") {
     // Check if a tab with the same src already exists                                                                                                                                                             
     const tabs = document.getElementById('tabs');                                                                                                                                                                  
     const existingTabButton = Array.from(tabs.children).find(button => button.dataset.src === src);                                                                                                                
@@ -716,11 +678,12 @@ window.DarkReader = require('darkreader');
     const webview = document.createElement('webview');                                                                                                                                                             
     webview.src = src;                                                                                                                                                                                             
     webview.className = 'section';                                                                                                                                                                                 
-    webview.style.display = 'flex';                                                                                                                                                                                
+    webview.style.display = display;
                                                                                                                                                                                                                    
-    webview.setAttribute("preload", "preload.js");                                                                                                                                                                 
-    webview.setAttribute('nodeintegration', '');                                                                                                                                                                   
-    webview.setAttribute('nodeintegrationinsubframes', '');                                                                                                                                                        
+	webview.setAttribute("preload", "preload.js");
+
+    webview.setAttribute('nodeintegration', '');
+    webview.setAttribute('nodeintegrationinsubframes', '');             webview.setAttribute('tabname', title)                                                                                                               
                                                                                                                                                                                                                    
     // Create a unique id for the webview                                                                                                                                                                          
     const webviewId = `webview-${Date.now()}`;                                                                                                                                                                     
@@ -745,11 +708,18 @@ window.DarkReader = require('darkreader');
                                                                                                                                                                                                                    
     // Apply tab styling                                                                                                                                                                                           
     tabButton.style.display = 'inline-block';                                                                                                                                                                      
-    tabButton.style.padding = '10px';                                                                                                                                                                              
-    tabButton.style.border = '1px solid #ccc';                                                                                                                                                                     
-    //tabButton.style.borderBottom = 'none';                                                                                                                                                                         
-    tabButton.style.backgroundColor = '#555';                                                                                                                                                                      
-  tabButton.style.cursor = 'pointer';                                                                                                                                                                            
+    //tabButton.style.padding = '10px';                                                                                                                                                                              
+    //tabButton.style.border = '1px solid #111';                                                                                                                                                                     
+	  //tabButton.style.borderBottom = 'none';
+
+
+	  if (display === "flex") {
+	      tabButton.style.backgroundColor = '#222';
+	  } else {
+	      tabButton.style.backgroundColor = '#000';
+	  }
+	
+	  tabButton.style.cursor = 'pointer';                                                                                                                                                                            
                                                                                                                                                                                                                    
     // Fetch the title from the webview                                                                                                                                                                            
     /*webview.addEventListener('did-finish-load', () => {                                                                                                                                                            
@@ -759,28 +729,50 @@ window.DarkReader = require('darkreader');
             tabButton.textContent = hostname;                                                                                                                                                                      
         });                                                                                                                                                                                                        
 	});*/
-        tabButton.textContent = d.label;
+    tabButton.textContent = title;
                                                                                                                                                                                                                    
     // Toggle visibility of the corresponding webview on click                                                                                                                                                     
     tabButton.addEventListener('click', () => {                                                                                                                                                                    
         if (webview.style.display === 'none') {                                                                                                                                                                    
-            webview.style.display = 'flex';                                                                                                                                                                        
-            tabButton.style.backgroundColor = '#555'; // Active tab color                                                                                                                                          
+        webview.style.display = 'flex';
+	
+	//tabButton.style.border = '1px solid #111';                                                                  
+        tabButton.style.backgroundColor = '#222'; // Active tab color                                                                                                                                          
         } else {                                                                                                                                                                                                   
-            webview.style.display = 'none';                                                                                                                                                                        
-            tabButton.style.backgroundColor = '#333'; // Inactive tab color                                                                                                                                        
-        }                                                                                                                                                                                                          
+            webview.style.display = 'none';
+            tabButton.style.backgroundColor = '#000'; // Inactive tab color                                                                         
+	tabButton.style.border = '1px solid #000';                                                                                                                                 
+        }
+
+        initializeSplit();
+
+	updateConfigNodeProperty("sectionState",getSectionsState())
+
     });                                                                                                                                                                                                            
                                                                                                                                                                                                                    
     // Delete the webview and button on right-click                                                                                                                                                                
     tabButton.addEventListener('contextmenu', (event) => {                                                                                                                                                         
         event.preventDefault();                                                                                                                                                                                    
         container.removeChild(webview);                                                                                                                                                                            
-        tabButton.parentNode.removeChild(tabButton);                                                                                                                                                               
-    });                                                                                                                                                                                                            
+        tabButton.parentNode.removeChild(tabButton);
+
+	initializeSplit();
+
+	updateConfigNodeProperty("sectionState",getSectionsState())
+
+    });
+
+    // any time a section is opened
+    initializeSplit();
+    if (!initialize) {
+
+	updateConfigNodeProperty("sectionState",getSectionsState())
+    }
+
+     
                                                                                                                                                                                                                    
     // Append the button to the tabs div                                                                                                                                                                           
-    tabs.appendChild(tabButton);                                                                                                                                                                                   
+    tabs.appendChild(tabButton);                                                                                                                                                                      
 }              
 
 
@@ -817,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
             [...dataTransfer.items].forEach((item) => {
 		                if (item.type === "text/html" && !linkProcessed) {
                     item.getAsString((htmlString) => {
-                        console.log(item);
+
 
                         // Parse the HTML string
                         const parser = new DOMParser();
@@ -1288,8 +1280,73 @@ const splitContainer = document.getElementById('split-container');
 const inspectorGadget = document.getElementById('inspector');
 let isDraggingTitleBar = false;
 const overlay = document.querySelector('.overlay');
-      let newTop;
+let newTop;
 
+      function processSectionsJSON(jsonData) {
+    // Parse the JSON data if it's in string form
+    const sections = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+
+    // Iterate over each section in the JSON
+    sections.forEach(sectionData => {
+        if (sectionData.src) {
+            // If the section has a src, it's a webview
+            const title = sectionData.tabname || 'Untitled';
+            const src = sectionData.src;
+
+            createWebView(title, src, initialize=true, display=sectionData.style.display || 'none');
+        } else {
+            // Otherwise, toggle the section based on its display property
+            const id = sectionData.id;
+            const display = sectionData.style.display || 'none';
+            toggleSection(id, display, initialize=true);
+        }
+    });
+}
+
+      function getSectionsState() {
+    // Get all section elements
+    const sections = document.querySelectorAll('.section');
+
+    // Create an array to store the section data
+    const sectionsData = [];
+
+    // Iterate over each section element
+    sections.forEach(section => {
+        // Get the id, style, and other attributes of the section
+        const sectionData = {
+            id: section.id || null,
+            style: {
+                display: section.style.display || null,
+                width: section.style.width || null
+            }
+        };
+
+        // If the section has a webview, include its src and tabName
+
+
+        if (section.id.includes("webview")) {
+	    // subtle, but the webview is NOT in a div, so we need the attributes from the section
+            sectionData.src = section.src || null;
+            sectionData.tabname = section.getAttribute('tabname') || null; // Ensure correct casing
+
+        }
+
+        // Add the section data to the array
+        sectionsData.push(sectionData);
+    });
+
+    // Convert the sections data array to JSON
+    const sectionsJSON = JSON.stringify(sectionsData, null, 2);
+
+    return sectionsJSON;
+}
+
+
+
+
+
+
+      
 
 function setTitleBarPosition(titleBar, pos) {
           splitContainer.style.top = `${pos}px`;
@@ -1320,6 +1377,7 @@ function setTitleBarPosition(titleBar, pos) {
 	  overlay.classList.remove('active');
 	  
           document.body.style.cursor = 'default';
+
 	  updateConfigNodeProperty("titlebar_position", newTop)
       });
 
@@ -1346,6 +1404,8 @@ let splitInstance;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeSplit();
+    // this state should come from .neopkm_config
+    //toggleSection('video-container', display="none")
 });
 
 function initializeSplit() {
@@ -1361,10 +1421,13 @@ function initializeSplit() {
             cursor: 'col-resize',
         });
     }
+    
 }
 
+
+	
       last_num = -1
-      function toggleSection(id, action = 'toggle') {
+      function toggleSection(id, display = 'toggle', initialize = false) {
 	  const sections = Array.from(document.querySelectorAll('.section')).filter(section => section.style.display !== 'none');
 	  //console.log(sections.length);
 
@@ -1378,10 +1441,10 @@ function initializeSplit() {
 	  const section = document.getElementById(id);
 	  const button = document.querySelector(`button[onclick="toggleSection('${id}')"]`);
 	  
-	  if (action === 'show') {
+	  if (display === 'flex') {
               section.style.display = 'flex';
               button.classList.remove('hidden');
-	  } else if (action === 'hide') {
+	  } else if (display === 'none') {
               section.style.display = 'none';
               button.classList.add('hidden');
 	  } else {  // Toggle behavior
@@ -1392,9 +1455,17 @@ function initializeSplit() {
 		  section.style.display = 'none';
 		  button.classList.add('hidden');
               }
-	  }
+    }
 	  initializeSplit();
-	  last_num = sections.length
+
+	  if(!initialize) {
+	      updateConfigNodeProperty("sectionState",getSectionsState())
+	  }
+
+
+
+
+    last_num = sections.length
       }
 
       
@@ -3777,13 +3848,14 @@ function setTableEditable(isEditable) {
 function setupNodeViewerWindow(d) {
 
     if (isYouTubeLink(d.url) === true) {
-	toggleSection('video-container', action="show")
+	toggleSection('video-container', display="flex")
+
 	setVideoUrl(d);
 	//setVideoTitle(d.label);
     } else if (d.url.length > 1) {
 	//toggleSection('web-container', action="show")
 
-	createWebView(d)
+	createWebView(d.label, d.url)
 	/*
 	console.log(`setting webviewElement to ${d.url}`)
 	if (d.url.includes(".pdf")) {
@@ -3877,17 +3949,19 @@ function createInspector(d, readOnly = false) {
 }
 
 
-
+// Sections for code nodes
 function setupSections(label) {
     if (hasCodeExtension(label) === true) {
-	toggleSection('flake-editor', action="show")
-	toggleSection('test-editor', action="show")
-	toggleSection('console-container', action="show")
+	toggleSection('code-editor', display="flex")
+	toggleSection('flake-editor', display="flex")
+	toggleSection('test-editor', display="flex")
+	toggleSection('console-container', display="flex")
     } else {
-	toggleSection('flake-editor', action="hide")
-	toggleSection('test-editor', action="hide")
-	toggleSection('console-container', action="hide")
+	toggleSection('flake-editor', display="none")
+	toggleSection('test-editor', display="none")
+	toggleSection('console-container', display="none")
     }
+    updateConfigNodeProperty("sectionState",getSectionsState())
 }
 
 async function selectNode(event,d) {
@@ -3927,7 +4001,7 @@ async function selectNode(event,d) {
 
     
     inspector.style.display = "block";
-    codeEditor.style.display = "block";
+    //codeEditor.style.display = "block";
 
     // Many things rely on this
     currentNode = d;
@@ -4465,6 +4539,7 @@ inputs.forEach(input => {
                     if (event.shiftKey) {
                         selectInput();
                     } else {
+			navigateResults(1);
                         selectResult();
                     }
                 }

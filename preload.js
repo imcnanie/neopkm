@@ -2,9 +2,10 @@
 window.addEventListener('DOMContentLoaded', () => {
   const DarkReader = require('darkreader');
 
-  DarkReader.enable({
-    brightness: 50,
-    contrast: 100,
-    sepia: 10,
-  });
+    DarkReader.enable({
+	brightness: 50,
+	contrast: 100,
+	sepia: 10,
+      	darkSchemeBackgroundColor: '#000000',
+    });
 });

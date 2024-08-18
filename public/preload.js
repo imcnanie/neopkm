@@ -5,9 +5,10 @@
   // Optionally enable DarkReader immediately in the main frame
   window.addEventListener('DOMContentLoaded', () => {
     window.DarkReader.enable({
-      brightness: 100,
-      contrast: 100,
-      sepia: 10,
+	brightness: 100,
+	contrast: 100,
+	sepia: 10,
+	darkSchemeBackgroundColor: '#000000',
     });
   });
 
