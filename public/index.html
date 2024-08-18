@@ -479,7 +479,7 @@ iframe, webview {
     <button onclick="toggleSection('web-container')" class="hidden">
     🌐
     </button>
-    <button id="toggle-filter" class="hidden" onclick="document.body.classList.toggle('red-filter'); document.getElementById('inspector').classList.toggle('red-filter'); document.getElementById('horizontal-splitter').classList.toggle('red-filter'); document.getElementById('spotlightSearch').classList.toggle('red-filter'); document.getElementById('title-bar').classList.toggle('red-filter'); document.querySelectorAll('.title-bar button').forEach(button => button.classList.toggle('red-filter'));">🌻</button>
+    <button id="toggle-filter" class="hidden" onclick="setupRedMode();">🌻</button>
 
     <button id="toggle-filter" class="hidden" onclick="document.getElementById('video-container').classList.toggle('invert-filter');document.getElementById('web-container').classList.toggle('invert-filter');  ">invert</button>
 
@@ -563,6 +563,18 @@ iframe, webview {
     <script src="youtube_search_modal.js"></script>
     <script src="MarginaliaSearchModal_script.js"></script>
 
+    <!-- setup red mode-->
+    <script>
+      function setupRedMode() {
+	  document.body.classList.toggle('red-filter');
+	  document.getElementById('inspector').classList.toggle('red-filter');
+	  document.getElementById('horizontal-splitter').classList.toggle('red-filter');
+	  document.getElementById('spotlightSearch').classList.toggle('red-filter');
+	  document.getElementById('title-bar').classList.toggle('red-filter');
+	  document.querySelectorAll('.title-bar button').forEach(button => button.classList.toggle('red-filter'));
+      }
+      </script>
+    
     <!-- neopkm_config node for saving various states of UI elements -->
     <script>
       async function updateConfigNodeProperty(property, value) {
@@ -4280,11 +4292,13 @@ console.log("Generated Main Function:\n", mainFunction);
 // Function to save the transform to local storage
 function saveTransformToLocalStorage(transform) {
     localStorage.setItem('d3-zoom-transform', JSON.stringify(transform));
+    //updateConfigNodeProperty("d3-zoom-transform", JSON.stringify(transform))
 }
 
 // Function to retrieve the transform from local storage
 function getTransformFromLocalStorage() {
     const transform = localStorage.getItem('d3-zoom-transform');
+   // const transform = getConfigNodeProperty("d3-zoom-transform")
     return transform ? JSON.parse(transform) : null;
 }
 
@@ -4538,9 +4552,11 @@ inputs.forEach(input => {
                 } else if (event.key === 'Enter') {
                     if (event.shiftKey) {
                         selectInput();
-                    } else {
-			navigateResults(1);
-                        selectResult();
+		    } else {
+			if (currentIndex === -1) {
+			    navigateResults(1);
+			    selectResult();
+			}
                     }
                 }
             }
