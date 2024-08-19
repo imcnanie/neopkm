@@ -671,11 +671,36 @@ async function loadUIStateFromConfigNode() {
 
 
 
-window.DarkReader = require('darkreader');
+      window.DarkReader = require('darkreader');
+
+// Global keydown event listener
+document.addEventListener('keydown', function (event) {
+    if (lastActiveWebView && event.ctrlKey && event.shiftKey) {
+        switch (event.code) {
+            case 'ArrowLeft':
+                // Navigate back in history
+                if (lastActiveWebView.canGoBack()) {
+                    lastActiveWebView.goBack();
+                }
+                break;
+            case 'ArrowRight':
+                // Navigate forward in history
+                if (lastActiveWebView.canGoForward()) {
+                    lastActiveWebView.goForward();
+                }
+                break;
+        }
+    }
+      });
+      
+
+      let lastActiveWebView = null; // Track the last active webview
+
       function createWebView(title, src, initialize=false, display="flex") {
-    // Check if a tab with the same src already exists                                                                                                                                                             
-    const tabs = document.getElementById('tabs');                                                                                                                                                                  
-    const existingTabButton = Array.from(tabs.children).find(button => button.dataset.src === src);                                                                                                                
+	  // Check if a tab with the same src already exists                                           
+	  const tabs = document.getElementById('tabs');                                                
+	  const existingTabButton = Array.from(tabs.children)
+		.find(button => button.dataset.src === src);                                                                                                                
                                                                                                                                                                                                                    
     if (existingTabButton) {                                                                                                                                                                                       
         // Flash the existing tab button                                                                                                                                                                           
@@ -701,13 +726,26 @@ window.DarkReader = require('darkreader');
           
 	  // Create a unique id for the webview                                                                                                                                                                          
     const webviewId = `webview-${Date.now()}`;                                                                                                                                                                     
-    webview.id = webviewId;                                                                                                                                                                                        
-                                                                                                                                                                                                                   
-    // Append the webview to the video-container                                                                                                                                                                   
-    const container = document.getElementById('horizontal-splitter');                                                                                                                                              
-    container.appendChild(webview);                                                                                                                                                                                
-                                                                                                                                                                                                                   
-    // Create the tab button                                                                                                                                                                                       
+	webview.id = webviewId;
+
+
+
+	// Append the webview to the video-container
+	const container = document.getElementById('horizontal-splitter');
+	
+	// Append the back button and webview to the container
+      container.appendChild(webview);
+
+      // When the webview gains focus, set it as the last active webview
+      webview.addEventListener('focus', function () {
+      lastActiveWebView = webview;
+      });
+
+      
+
+	
+	
+	// Create the tab button                                                                                                                                                                                       
     const tabButton = document.createElement('button');                                                                                                                                                            
     tabButton.className = 'tab-button';                                                                                                                                                                            
     tabButton.dataset.src = src; // Store the src in the button's dataset for easy lookup                                                                                                                          
@@ -767,7 +805,9 @@ window.DarkReader = require('darkreader');
     // Delete the webview and button on right-click                                                                                                                                                                
     tabButton.addEventListener('contextmenu', (event) => {                                                                                                                                                         
         event.preventDefault();                                                                                                                                                                                    
-        container.removeChild(webview);                                                                                                                                                                            
+        container.removeChild(webview);
+
+	
         tabButton.parentNode.removeChild(tabButton);
 
 	initializeSplit();
@@ -4713,8 +4753,8 @@ inputs.forEach(input => {
 		    console.log("zooming")
 		    svg.transition().call(zoom.translateTo, selectedPosition_x, selectedPosition_y);
 		    //svg.transition().call(zoom.translateTo, node.x_positions[node.instance], node.y_positions[node.instance]);		    
-		    selectNode(null, nodeDetails)
-                }
+		}
+		selectNode(null, nodeDetails)
 		
             }
         }
