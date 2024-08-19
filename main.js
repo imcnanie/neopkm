@@ -40,6 +40,7 @@ app.on('ready', () => {
 	    webSecurity: false,  // Disable web security
             allowRunningInsecureContent: true,
             nodeIntegrationInSubFrames: true,
+	    plugins: true
 
         },
     });
@@ -54,9 +55,9 @@ app.on('ready', () => {
     //mainWindow.loadURL('myapp://index.html');
     
     // loading from localhost will have problems with the preload script for darkreader in webviews
-    //mainWindow.loadURL('http://localhost:8004');
+    mainWindow.loadURL('http://localhost:8004');
 
     // This may have file upload issue TODO
-    mainWindow.loadFile(path.join(__dirname, 'public', 'index.html'));
+    //mainWindow.loadFile("/home/printer/projects/neopkm/public/uploads/test.pdf")l//path.join(__dirname, 'public', 'index.html'));
 });
 

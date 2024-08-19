@@ -4,11 +4,12 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
-module.exports = function() {
+function startServer() {
     const app = express();
     const PORT = process.env.PORT || 8004;
-
+    
     // Set up storage for multer
     const storage = multer.diskStorage({
         destination: (req, file, cb) => {
@@ -18,15 +19,118 @@ module.exports = function() {
             cb(null, Date.now() + path.extname(file.originalname));
         }
     });
-
+    
     const upload = multer({ storage: storage });
-
+    
     // Middleware to parse JSON bodies
     app.use(express.json());
 
+app.get('/pdf/:file', (req, res) => {
+    const file = req.params.file;
+    const pdfPath = path.join(__dirname, 'public/uploads', file);
+    
+    // Check if the PDF file exists
+    fs.access(pdfPath, fs.constants.F_OK, (err) => {
+        if (err) {
+            return res.status(404).send('PDF file not found');
+        } else {
+            // If the file exists, serve it embedded in an HTML page
+            res.send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>PDF Viewer</title>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+                    <style>
+                        #pdf-canvas {
+                            border: 1px solid black;
+                            direction: ltr;
+                        }
+                        .textLayer {
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            overflow: hidden;
+                            pointer-events: none;
+                            font-family: sans-serif;
+                            font-size: 10px;
+                            transform-origin: 0 0; /* Ensures that scaling occurs from the top-left */
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div style="position: relative; width: fit-content; margin: auto;">
+                        <canvas id="pdf-canvas"></canvas>
+                        <div id="pdf-text-layer" class="textLayer"></div>
+                    </div>
+                    <script>
+                        var url = '/uploads/${file}';
+
+                        pdfjsLib.getDocument(url).promise.then(function(pdf) {
+                            console.log('PDF loaded');
+                            
+                            pdf.getPage(1).then(function(page) {
+                                console.log('Page loaded');
+                                
+                                var scale = 1.5;
+                                var viewport = page.getViewport({scale: scale});
+
+                                var canvas = document.getElementById('pdf-canvas');
+                                var context = canvas.getContext('2d');
+                                canvas.height = viewport.height;
+                                canvas.width = viewport.width;
+
+                                var renderContext = {
+                                    canvasContext: context,
+                                    viewport: viewport
+                                };
+                                var renderTask = page.render(renderContext);
+
+                                renderTask.promise.then(function () {
+                                    console.log('Page rendered');
+
+                                    // Now render the text layer
+                                    var textLayerDiv = document.getElementById('pdf-text-layer');
+                                    textLayerDiv.style.width = canvas.width + 'px';
+                                    textLayerDiv.style.height = canvas.height + 'px';
+                                    textLayerDiv.style.transform = 'scale(' + scale + ')';
+                                    
+                                    page.getTextContent().then(function(textContent) {
+                                        pdfjsLib.renderTextLayer({
+                                            textContent: textContent,
+                                            container: textLayerDiv,
+                                            viewport: viewport,
+                                            textDivs: [],
+                                            enhanceTextSelection: true // Optional, improves text selection behavior
+                                        }).promise.then(function () {
+                                            console.log('Text layer rendered');
+                                        });
+                                    });
+                                });
+                            });
+                        }).catch(function(error) {
+                            console.error('Error loading PDF:', error);
+                        });
+                    </script>
+                </body>
+                </html>
+            `);
+        }
+    });
+});
+
+        
+            
+
+    
+    
     // Serve static files from the 'public' directory
     app.use(express.static(path.join(__dirname, 'public')));
 
+    
+    
     // Serve the index.html file for the root route
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -42,8 +146,64 @@ module.exports = function() {
         }
     });
 
+
+    app.use('/proxy', async (req, res, next) => {
+    const targetUrl = req.query.url;
+
+    if (!targetUrl) {
+        return res.status(400).send('URL parameter is required');
+    }
+
+    // Ensure the target URL is well-formed
+    let formattedTargetUrl = targetUrl;
+    if (!/^https?:\/\//i.test(targetUrl)) {
+        formattedTargetUrl = `https://${targetUrl}`;
+    }
+
+    try {
+        const response = await axios.get(formattedTargetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Referer': formattedTargetUrl, // Sometimes needed
+                'Origin': 'https://chat.openai.com', // Adjust to your target's origin if needed
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            },
+            maxRedirects: 0, // Prevent automatic redirection
+            validateStatus: status => status < 400 || status === 308 || status === 403, // Allow 403 responses for handling
+        });
+
+        res.send(response.data);
+    } catch (error) {
+        if (error.response) {
+            if (error.response.status === 403) {
+                console.error('Proxy error: Request failed with status code 403. Access is forbidden.');
+                res.status(403).send('Access forbidden by the target server.');
+            } else if (error.response.status === 308) {
+                const newUrl = error.response.headers.location;
+                console.log(`Redirecting to: ${newUrl}`);
+                res.redirect(newUrl);
+            } else {
+                console.error('Proxy error:', error.message);
+                res.status(500).send('Proxy error');
+            }
+        } else {
+            console.error('Proxy error:', error.message);
+            res.status(500).send('Proxy error');
+        }
+    }
+    });
+
+    
+
+    
+    
+
+    
+    
+    
     // Proxy route to fetch external pages
-    app.get('/proxy', async (req, res) => {
+    app.get('/proxy_old', async (req, res) => {
         const { url } = req.query;
         if (!url) {
             return res.status(400).send('URL parameter is required');
@@ -178,3 +338,12 @@ module.exports = function() {
     });
 };
 
+
+
+
+// This allows the module to be run from the command line
+if (require.main === module) {
+    startServer();
+}
+
+module.exports = startServer;

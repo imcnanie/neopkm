@@ -521,7 +521,7 @@ iframe, webview {
         </table>
       </div>
       <div id="console-container" class="section">
-        <webview id="consoleContainer" src="" allowfullscreen></webview>
+        <iframe id="consoleContainer" src="" allowfullscreen></iframe>
       </div>
       
       <div id="video-container" class="section">
@@ -696,138 +696,155 @@ document.addEventListener('keydown', function (event) {
 
       let lastActiveWebView = null; // Track the last active webview
 
-      function createWebView(title, src, initialize=false, display="flex") {
-	  // Check if a tab with the same src already exists                                           
-	  const tabs = document.getElementById('tabs');                                                
-	  const existingTabButton = Array.from(tabs.children)
-		.find(button => button.dataset.src === src);                                                                                                                
-                                                                                                                                                                                                                   
+function createWebView(title, og_src, initialize=false, display="flex") {
+    // Check if a tab with the same src already exists
+    let src = og_src;
+    
+    if ( !og_src.includes("localhost:") ) {
+	src = "http://localhost:8004/proxy?url="+og_src
+    }
+    
+    const tabs = document.getElementById('tabs');                                                
+    const existingTabButton = Array.from(tabs.children)
+	  .find(button => button.dataset.src === src);                                                                                                                
+    
     if (existingTabButton) {                                                                                                                                                                                       
         // Flash the existing tab button                                                                                                                                                                           
         existingTabButton.classList.add('flash');                                                                                                                                                                  
         setTimeout(() => {                                                                                                                                                                                         
             existingTabButton.classList.remove('flash');                                                                                                                                                           
         }, 1000);                                                                                                                                                                                                  
-                                                                                                                                                                                                                   
+        
         return;                                                                                                                                                                                                    
     }                                                                                                                                                                                                              
-                                                                                                                                                                                                                   
+    
     // Create a new webview element                                                                                                                                                                                
-    const webview = document.createElement('webview');                                                                                                                                                             
+    const webview = document.createElement('iframe');                                                                                                                                                             
     webview.src = src;                                                                                                                                                                                             
     webview.className = 'section';                                                                                                                                                                                 
-	  webview.style.display = display;
-          
-	  webview.setAttribute("preload", "preload.js");
-	  
-	  webview.setAttribute('nodeintegration', '');
-	  webview.setAttribute('nodeintegrationinsubframes', '');
-	  webview.setAttribute('tabname', title)                                                                                                               
-          
-	  // Create a unique id for the webview                                                                                                                                                                          
+    webview.style.display = display;
+    
+    webview.setAttribute("preload", "preload.js");
+    
+    webview.setAttribute('nodeintegration', '');
+    webview.setAttribute('nodeintegrationinsubframes', '');
+    webview.setAttribute('tabname', title)                                                                                                               
+    
+    // Create a unique id for the webview                                                                                                                                                                          
     const webviewId = `webview-${Date.now()}`;                                                                                                                                                                     
-	webview.id = webviewId;
-
-
-
-	// Append the webview to the video-container
-	const container = document.getElementById('horizontal-splitter');
-	
-	// Append the back button and webview to the container
-      container.appendChild(webview);
-
-      // When the webview gains focus, set it as the last active webview
-      webview.addEventListener('focus', function () {
-      lastActiveWebView = webview;
-      });
-
-      
-
-	
-	
-	// Create the tab button                                                                                                                                                                                       
+    webview.id = webviewId;
+    
+    
+    
+    // Append the webview to the video-container
+    const container = document.getElementById('horizontal-splitter');
+    
+    // Append the back button and webview to the container
+    container.appendChild(webview);
+    
+    // When the webview gains focus, set it as the last active webview
+    webview.addEventListener('focus', function () {
+	lastActiveWebView = webview;
+    });
+    
+    
+    
+    
+    
+    // Create the tab button                                                                                                                                                                                       
     const tabButton = document.createElement('button');                                                                                                                                                            
     tabButton.className = 'tab-button';                                                                                                                                                                            
     tabButton.dataset.src = src; // Store the src in the button's dataset for easy lookup                                                                                                                          
-                                                                                                                                                                                                                   
-    // Set the favicon as the button's background image                                                                                                                                                            
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(src).hostname}`;                                                                                                                       
-    const hostname = new URL(src).hostname;                                                                                                                                                                        
+    
+    // Set the favicon as the button's background image
+    let faviconUrl;
+    let hostname;
+    
+    try {
+	faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(src).hostname}`;
+	hostname = new URL(src).hostname; 
+    } catch (error) {
+	faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL("https://example.com/").hostname}`;
+	hostname = new URL("https://example.com/").hostname; 
+    }
+    
+    //const hostname = new URL(src).hostname;                                                                                                                                                                        
     tabButton.style.backgroundImage = `url(${faviconUrl})`;                                                                                                                                                        
     tabButton.style.backgroundSize = '16px 16px';                                                                                                                                                                  
     tabButton.style.backgroundRepeat = 'no-repeat';                                                                                                                                                                
     tabButton.style.paddingLeft = '20px'; // Adjust padding for label                                                                                                                                              
-                                                                                                                                                                                                                   
+    
     // Apply tab styling                                                                                                                                                                                           
     tabButton.style.display = 'inline-block';                                                                                                                                                                      
     //tabButton.style.padding = '10px';                                                                                                                                                                              
     //tabButton.style.border = '1px solid #111';                                                                                                                                                                     
-	  //tabButton.style.borderBottom = 'none';
-
-
-	  if (display === "flex") {
-	      tabButton.style.backgroundColor = '#222';
-	  } else {
-	      tabButton.style.backgroundColor = '#000';
-	  }
-	
-	  tabButton.style.cursor = 'pointer';                                                                                                                                                                            
-                                                                                                                                                                                                                   
+    //tabButton.style.borderBottom = 'none';
+    
+    
+    if (display === "flex") {
+	tabButton.style.backgroundColor = '#222';
+    } else {
+	tabButton.style.backgroundColor = '#000';
+    }
+    
+    tabButton.style.cursor = 'pointer';                                                                                                                                                                            
+    
     // Fetch the title from the webview                                                                                                                                                                            
     /*webview.addEventListener('did-finish-load', () => {                                                                                                                                                            
-        webview.executeJavaScript('document.title').then(title => {                                                                                                                                                
-            tabButton.textContent = title || hostname;                                                                                                                                                             
-        }).catch(() => {                                                                                                                                                                                           
-            tabButton.textContent = hostname;                                                                                                                                                                      
-        });                                                                                                                                                                                                        
-	});*/
+      webview.executeJavaScript('document.title').then(title => {                                                                                                                                                
+      tabButton.textContent = title || hostname;                                                                                                                                                             
+      }).catch(() => {                                                                                                                                                                                           
+      tabButton.textContent = hostname;                                                                                                                                                                      
+      });                                                                                                                                                                                                        
+      });*/
     tabButton.textContent = title;
-                                                                                                                                                                                                                   
+    
     // Toggle visibility of the corresponding webview on click                                                                                                                                                     
     tabButton.addEventListener('click', () => {                                                                                                                                                                    
         if (webview.style.display === 'none') {                                                                                                                                                                    
-        webview.style.display = 'flex';
-	
-	//tabButton.style.border = '1px solid #111';                                                                  
-        tabButton.style.backgroundColor = '#222'; // Active tab color                                                                                                                                          
+            webview.style.display = 'flex';
+	    
+	    //tabButton.style.border = '1px solid #111';                                                                  
+            tabButton.style.backgroundColor = '#222'; // Active tab color                                                                                                                                          
         } else {                                                                                                                                                                                                   
             webview.style.display = 'none';
             tabButton.style.backgroundColor = '#000'; // Inactive tab color                                                                         
-	tabButton.style.border = '1px solid #000';                                                                                                                                 
+	    tabButton.style.border = '1px solid #000';                                                                                                                                 
         }
-
+	
         initializeSplit();
-
+	
 	updateConfigNodeProperty("sectionState",getSectionsState())
-
+	
     });                                                                                                                                                                                                            
-                                                                                                                                                                                                                   
+    
     // Delete the webview and button on right-click                                                                                                                                                                
     tabButton.addEventListener('contextmenu', (event) => {                                                                                                                                                         
         event.preventDefault();                                                                                                                                                                                    
         container.removeChild(webview);
-
+	
 	
         tabButton.parentNode.removeChild(tabButton);
-
+	
 	initializeSplit();
-
+	
 	updateConfigNodeProperty("sectionState",getSectionsState())
-
+	
     });
-
+    
     // any time a section is opened
     initializeSplit();
     if (!initialize) {
-
+	
 	updateConfigNodeProperty("sectionState",getSectionsState())
     }
-
-     
-                                                                                                                                                                                                                   
+    
+    
+    
     // Append the button to the tabs div                                                                                                                                                                           
     tabs.appendChild(tabButton);                                                                                                                                                                      
 }              
+
 
 
 
@@ -3439,11 +3456,11 @@ linkSelection.enter()
         .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10))
         .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10))
         .attr("xlink:href", d => { //.attr("xlink:href", d => d.imageUrl)
-	    if (d.imageUrl.startsWith('/uploads')) {
+	    /*if (d.imageUrl.startsWith('/uploads')) {
 		// make electron happy
 		// this is backwards compatibility with my old nodes
 		return `${__dirname}${d.imageUrl}`;
-	    }
+	    }*/
 
 	    return d.imageUrl;
 	})
