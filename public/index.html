@@ -425,7 +425,7 @@ iframe, webview {
 </head>
     <body>
     
-    <svg>
+    <svg id="nodeWorldSVG">
         <defs>
             <marker id="arrowhead" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="6" markerHeight="6" orient="auto">
                 <path d="M0,-5L10,0L0,5" fill="#999" />
@@ -489,53 +489,54 @@ iframe, webview {
             <!--<button onclick="toggleSplitContainer()" id="toggleButton" style="background-color: #333; border: none; color: #ccc; width: 30px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 15px; transform: scaleX(1.1) scaleY(0.7) translateY(0.3em)">
                 ^
     </button>-->
-    <div id="tabs" style="width:100%, height:100%">
-      <!-- tabs go here -->
+  <div id="tabs" style="width:100%, height:100%">
+    <!-- tabs go here -->
+  </div>
+  <div></div>
     </div>
-    <div></div>
-        </div>
-        <div id="horizontal-splitter" class="flex-container">
-            <div id="code-editor" class="section">
-                <textarea id="nodeCode"></textarea>
-            </div>
-            <div id="flake-editor" class="section">
-                <textarea id="nodeFlake"></textarea>
-            </div>
-            <div id="test-editor" class="section">
-                <table id="nodeTestsTable">
-                    <thead>
-                        <tr>
-                            <th>Input</th>
-                            <th>Output</th>
-                            <td class="run-tests" onclick="runTests(this)">🏃‍♀️</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td class="delete-btn" onclick="deleteRow(this)">❌</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="console-container" class="section">
-                <webview id="consoleContainer" src="" allowfullscreen></webview>
-            </div>
-	    
-	    <div id="video-container" class="section">
-	      <div class="overlay"></div>    <!-- this way we can drag over iframes without problems -->
-	      <div id="player"></div>
-	    </div>
-	    
-        </div>
+    <div id="horizontal-splitter" class="flex-container">
+      <div class="overlay"></div>    <!-- this way we can drag over iframes without problems -->
+      <div id="code-editor" class="section">
+        <textarea id="nodeCode"></textarea>
+      </div>
+      <div id="flake-editor" class="section">
+        <textarea id="nodeFlake"></textarea>
+      </div>
+      <div id="test-editor" class="section">
+        <table id="nodeTestsTable">
+          <thead>
+            <tr>
+              <th>Input</th>
+              <th>Output</th>
+              <td class="run-tests" onclick="runTests(this)">🏃‍♀️</td>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td contenteditable="true"></td>
+              <td contenteditable="true"></td>
+              <td class="delete-btn" onclick="deleteRow(this)">❌</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="console-container" class="section">
+        <webview id="consoleContainer" src="" allowfullscreen></webview>
+      </div>
+      
+      <div id="video-container" class="section">
+	
+	<div id="player"></div>
+      </div>
+      
+    </div>
     </div>
     <div id="spotlightSearch">
-        <div id="searchTitle"></div>
-        <input type="text" id="searchInput" placeholder="Search...">
-        <div id="results"></div>
+      <div id="searchTitle"></div>
+      <input type="text" id="searchInput" placeholder="Search...">
+      <div id="results"></div>
     </div>
-
+    
     <!-- youtube popup modal on ctrl+shift+y -->
         <div id="YoutubeSearchModal_videoModal" class="YoutubeSearchModal_modal">
         <div class="YoutubeSearchModal_modal-content">
@@ -690,14 +691,15 @@ window.DarkReader = require('darkreader');
     const webview = document.createElement('webview');                                                                                                                                                             
     webview.src = src;                                                                                                                                                                                             
     webview.className = 'section';                                                                                                                                                                                 
-    webview.style.display = display;
-                                                                                                                                                                                                                   
-	webview.setAttribute("preload", "preload.js");
-
-    webview.setAttribute('nodeintegration', '');
-    webview.setAttribute('nodeintegrationinsubframes', '');             webview.setAttribute('tabname', title)                                                                                                               
-                                                                                                                                                                                                                   
-    // Create a unique id for the webview                                                                                                                                                                          
+	  webview.style.display = display;
+          
+	  webview.setAttribute("preload", "preload.js");
+	  
+	  webview.setAttribute('nodeintegration', '');
+	  webview.setAttribute('nodeintegrationinsubframes', '');
+	  webview.setAttribute('tabname', title)                                                                                                               
+          
+	  // Create a unique id for the webview                                                                                                                                                                          
     const webviewId = `webview-${Date.now()}`;                                                                                                                                                                     
     webview.id = webviewId;                                                                                                                                                                                        
                                                                                                                                                                                                                    
@@ -876,7 +878,7 @@ function handleFileDrop(file) {
         if (data.status === 'success') {
             document.getElementById('uploadStatus').innerHTML = `Upload successful! File path: ${data.filename}`;
             createNodeAndLink(currentNode.id, currentNode.x_positions[0], currentNode.y_positions[0] + 30,
-                              data.filename, "", "/uploads/" + data.filename);
+                              data.filename, "", "uploads/" + data.filename);
         } else {
             document.getElementById('uploadStatus').innerHTML = 'Upload failed!';
         }
@@ -929,7 +931,7 @@ function handleLinkDrop(title, link) {
         if (data.status === 'success') {
             document.getElementById('uploadStatus').innerHTML = `Upload successful! File path: ${data.filename}`;
 	    createNodeAndLink(currentNode.id, currentNode.x_positions[0], currentNode.y_positions[0]+30,
-			      data.filename, "", "/uploads/"+data.filename);
+			      data.filename, "", "uploads/"+data.filename);
         } else {
           document.getElementById('uploadStatus').innerHTML = 'Upload failed!';
         }
@@ -1287,9 +1289,11 @@ async function evaluateJsonEntries(data, jsFunctionString) {
               
     <!-- split pane on the bottom -->
     <script>
-    const titleBar = document.getElementById('title-bar');
+
+const titleBar = document.getElementById('title-bar');
 const splitContainer = document.getElementById('split-container');
 const inspectorGadget = document.getElementById('inspector');
+const nodeWorldSVG = document.getElementById('nodeWorldSVG');
 let isDraggingTitleBar = false;
 const overlay = document.querySelector('.overlay');
 let newTop;
@@ -1354,44 +1358,48 @@ let newTop;
 }
 
 
-
-
-
-
       
 
 function setTitleBarPosition(titleBar, pos) {
-          splitContainer.style.top = `${pos}px`;
-          inspectorGadget.style.maxHeight = `${pos-titleBar.offsetHeight-10}px`
-      }
-      
-      titleBar.addEventListener('mousedown', function(e) {
-	  isDraggingTitleBar = true;
-	  overlay.classList.add('active');
-	  document.body.style.cursor = 'ns-resize';
-      });
-      
-      inspectorGadget.style.maxHeight = `${window.innerHeight-titleBar.offsetHeight-10}px`
-      splitContainer.style.top = `${window.innerHeight-titleBar.offsetHeight}px`;
-      window.addEventListener('mousemove', function(e) {
-          if (!isDraggingTitleBar) return;
-          newTop  = e.clientY - titleBar.offsetHeight/2.0;
-	  
-          if (newTop < 0) newTop = 0;
-          if (newTop > window.innerHeight-titleBar.offsetHeight) newTop = window.innerHeight-titleBar.offsetHeight;
-          //splitContainer.style.top = `${newTop}px`;
-          //inspectorGadget.style.maxHeight = `${newTop-titleBar.offsetHeight-10}px`
-	  setTitleBarPosition(titleBar, newTop)
-      });
-      
-      window.addEventListener('mouseup', function() {
-          isDraggingTitleBar = false;
-	  overlay.classList.remove('active');
-	  
-          document.body.style.cursor = 'default';
+    splitContainer.style.top = `${pos}px`;
+    inspectorGadget.style.maxHeight = `${pos-titleBar.offsetHeight-10}px`
+    nodeWorldSVG.style.height = `${pos}px`;
+}
 
-	  updateConfigNodeProperty("titlebar_position", newTop)
-      });
+
+
+titleBar.addEventListener('mousedown', function(e) {
+    isDraggingTitleBar = true;
+    overlay.classList.add('active');
+    document.body.style.cursor = 'ns-resize';
+});
+
+
+
+inspectorGadget.style.maxHeight = `${window.innerHeight-titleBar.offsetHeight-10}px`
+splitContainer.style.top = `${window.innerHeight-titleBar.offsetHeight}px`;
+
+window.addEventListener('mousemove', function(e) {
+    if (!isDraggingTitleBar) return;
+    newTop  = e.clientY - titleBar.offsetHeight/2.0;
+    
+    if (newTop < 0) newTop = 0;
+    if (newTop > window.innerHeight-titleBar.offsetHeight) newTop = window.innerHeight-titleBar.offsetHeight;
+    //splitContainer.style.top = `${newTop}px`;
+    //inspectorGadget.style.maxHeight = `${newTop-titleBar.offsetHeight-10}px`
+    setTitleBarPosition(titleBar, newTop)
+});
+
+
+
+window.addEventListener('mouseup', function() {
+    isDraggingTitleBar = false;
+    overlay.classList.remove('active');
+    
+    document.body.style.cursor = 'default';
+    
+    updateConfigNodeProperty("titlebar_position", newTop)
+});
 
 
 
@@ -3390,7 +3398,16 @@ linkSelection.enter()
         .attr("height",  d => d.heights[d.instance]) // Adjust height as needed
         .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10))
         .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10))
-          .attr("xlink:href", d => d.imageUrl)
+        .attr("xlink:href", d => { //.attr("xlink:href", d => d.imageUrl)
+	    if (d.imageUrl.startsWith('/uploads')) {
+		// make electron happy
+		// this is backwards compatibility with my old nodes
+		return `${__dirname}${d.imageUrl}`;
+	    }
+
+	    return d.imageUrl;
+	})
+
 	  .attr("stroke", d => connectionsToColor(d.connections) || "red", "none", "none")
 	  .attr("stroke-dasharray", "3 3")
 
@@ -3976,7 +3993,7 @@ function setupSections(label) {
     updateConfigNodeProperty("sectionState",getSectionsState())
 }
 
-async function selectNode(event,d) {
+async function selectNode(event, d) {
     
     const inspector = document.getElementById("inspector");
     const codeEditor = document.getElementById("code-editor");
@@ -4515,7 +4532,7 @@ inputs.forEach(input => {
         const searchTitle = document.getElementById('searchTitle');
         const resultsContainer = document.getElementById('results');
         const spotlightSearch = document.getElementById('spotlightSearch');
-        let currentIndex = -1;
+        let currentIndex = 0;
         let currentResults = [];
         let resolveSearch;
 
@@ -4526,6 +4543,7 @@ inputs.forEach(input => {
                 resolveSearch = resolve;
                 searchTitle.textContent = title;
                 spotlightSearch.style.display = 'block';
+
                 searchInput.focus();
             });
         }
@@ -4534,7 +4552,7 @@ inputs.forEach(input => {
         function closeSearch() {
             console.log('Closing search interface'); // Debug log
             spotlightSearch.style.display = 'none';
-            currentIndex = -1;
+            currentIndex = 0;
             resultsContainer.innerHTML = '';
             searchInput.value = '';
         }
@@ -4553,10 +4571,9 @@ inputs.forEach(input => {
                     if (event.shiftKey) {
                         selectInput();
 		    } else {
-			if (currentIndex === -1) {
-			    navigateResults(1);
-			    selectResult();
-			}
+			
+  			selectResult(currentIndex, dontZoom=event.altKey);
+			
                     }
                 }
             }
@@ -4628,6 +4645,10 @@ inputs.forEach(input => {
                 });
                 resultsContainer.appendChild(item);
             });
+
+	    // highlight the first entry
+	    currentIndex = 0;
+            updateSelection();
         }
 
         // Function to navigate results with arrow keys
@@ -4652,23 +4673,23 @@ inputs.forEach(input => {
         }
 
         // Function to select the current result
-        function selectResult(index = currentIndex) {
+      function selectResult(index = currentIndex, dontZoom=false) {
             if (index >= 0 && index < currentResults.length) {
                 const selectedItem = currentResults[index];
                 closeSearch();
-                resolveSearch({ label: selectedItem.label, exists: true, id: selectedItem.id, x: selectedItem.x, y: selectedItem.y, instance: selectedItem.instance });
+                resolveSearch({ label: selectedItem.label, exists: true, id: selectedItem.id, x: selectedItem.x, y: selectedItem.y, instance: selectedItem.instance, dontZoom: dontZoom});
             } else {
                 // No results found, return current input
-                selectInput();
+                selectInput(dontZoom=dontZoom);
             }
         }
 
         // Function to select the current input
-        function selectInput() {
+        function selectInput(dontZoom=false) {
             const currentInput = searchInput.value;
             if (currentInput) {
                 closeSearch();
-                resolveSearch({ label: currentInput, exists: false });
+                resolveSearch({ label: currentInput, exists: false, dontZoom: dontZoom });
             }
         }
 
@@ -4680,15 +4701,21 @@ inputs.forEach(input => {
             if (userInput.exists) {
                 const nodeDetails = await fetchNodeById(userInput.id);
                 console.log('Node details:', nodeDetails); // Debug log
-                if (nodeDetails) {
-                    const selectedPosition_x = nodeDetails.x_positions[userInput.instance];
-                    const selectedPosition_y = nodeDetails.y_positions[userInput.instance];
-                    const svg = d3.select('svg'); // Ensure you select the correct SVG element
-                    const zoom = d3.zoom();
+		
+                if (nodeDetails && !userInput.dontZoom) {
+		    // nodeDetails.instance is from a forgotten age, just make it 0
+                    const selectedPosition_x = nodeDetails.x_positions[0];
+                    const selectedPosition_y = nodeDetails.y_positions[0];
+		    
+		    //const svg = d3.select('svg');
+		    //const zoom = d3.zoom();
+		    
 		    console.log("zooming")
-                    svg.transition().call(zoom.translateTo, selectedPosition_x, selectedPosition_y);
+		    svg.transition().call(zoom.translateTo, selectedPosition_x, selectedPosition_y);
+		    //svg.transition().call(zoom.translateTo, node.x_positions[node.instance], node.y_positions[node.instance]);		    
 		    selectNode(null, nodeDetails)
                 }
+		
             }
         }
 

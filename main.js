@@ -52,7 +52,11 @@ app.on('ready', () => {
     mainWindow.webContents.setZoomFactor(2);
 
     //mainWindow.loadURL('myapp://index.html');
+    
+    // loading from localhost will have problems with the preload script for darkreader in webviews
     //mainWindow.loadURL('http://localhost:8004');
+
+    // This may have file upload issue TODO
     mainWindow.loadFile(path.join(__dirname, 'public', 'index.html'));
 });
 
