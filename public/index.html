@@ -22,7 +22,7 @@
             display: flex;
             flex-direction: column;
         }
-
+	
 /* Thin dark scrollbars */
 ::-webkit-scrollbar {
   width: 8px; /* Change this to make the scrollbar thicker or thinner */
@@ -700,7 +700,7 @@ function createWebView(title, og_src, initialize=false, display="flex") {
     // Check if a tab with the same src already exists
     let src = og_src;
     
-    if ( !og_src.includes("localhost:") ) {
+    if ( !og_src.includes("localhost:") && false ) {
 	src = "http://localhost:8004/proxy?url="+og_src
     }
     
@@ -754,7 +754,23 @@ function createWebView(title, og_src, initialize=false, display="flex") {
     // Create the tab button                                                                                                                                                                                       
     const tabButton = document.createElement('button');                                                                                                                                                            
     tabButton.className = 'tab-button';                                                                                                                                                                            
-    tabButton.dataset.src = src; // Store the src in the button's dataset for easy lookup                                                                                                                          
+	tabButton.dataset.src = src; // Store the src in the button's dataset for easy lookup
+
+	// make tabButton draggable for saving current url
+
+	
+	//document.addEventListener('dragover', function(event) {
+        //event.preventDefault();
+    //});
+
+    /*document.addEventListener('drop', function(event) {
+        event.preventDefault();
+        const url = event.dataTransfer.getData('text/plain');
+        if (url) {
+            window.location.href = url;
+        }
+	});
+*/	
     
     // Set the favicon as the button's background image
     let faviconUrl;
@@ -800,7 +816,20 @@ function createWebView(title, og_src, initialize=false, display="flex") {
     tabButton.textContent = title;
     
     // Toggle visibility of the corresponding webview on click                                                                                                                                                     
-    tabButton.addEventListener('click', () => {                                                                                                                                                                    
+	tabButton.addEventListener('click', (event) => {
+
+// Check if the Alt key was pressed during the click
+    if (event.altKey) {
+        // Save the current URL to the clipboard
+        const currentUrl = webview.src; // Assuming 'webview' is a reference to the <webview> element
+        navigator.clipboard.writeText(currentUrl).then(() => {
+            console.log('URL copied to clipboard');
+        }).catch(err => {
+            console.error('Failed to copy URL: ', err);
+        });
+        return; // Exit the function so it doesn't toggle the tab state
+    }
+	
         if (webview.style.display === 'none') {                                                                                                                                                                    
             webview.style.display = 'flex';
 	    
@@ -3383,8 +3412,8 @@ linkSelection.enter()
             .attr("instance", d => d.instance)
             .attr("cx", d => d.x_positions[d.instance])
             .attr("cy", d => d.y_positions[d.instance])
-            .attr("fill", fill)
             .attr("stroke", stroke)
+	    .attr("style", fill) //            .attr("fill", fill)
             .attr("stroke-dasharray", strokeDasharray)
             .on("mousedown", async function (event, d) {
 		selectNode(event, d);
@@ -3433,11 +3462,11 @@ linkSelection.enter()
 
     
     // Update rects for groupingLayer
-    updateRects(groupingLayer, groupingNodes, "rgba(128, 0, 128, 0.1)", "purple", "4 2");
-    updateRects(inheritedLayer, inheritedNodes, d => connectionsToColor(d.connections, transparency = 0.5) || "red", d => connectionsToColor(d.connections, transparency = 0.5) || "red", "3 3");
+    updateRects(groupingLayer, groupingNodes, "fill: rgba(128, 0, 128, 0.1) !important;", "purple", "4 2");
+    updateRects(inheritedLayer, inheritedNodes, d => `fill: ${connectionsToColor(d.connections)} !important;`, d => `fill: ${connectionsToColor(d.connections)} !important;`, "3 3");
 
     // Update rects for nodeLayer
-    updateRects(nodeLayer, regularNodes, d => connectionsToColor(d.connections) || "red", "none", "none");
+    updateRects(nodeLayer, regularNodes, d => `fill: ${connectionsToColor(d.connections)} !important;`);
 
     
     // Define a function to get a unique identifier for each rect
