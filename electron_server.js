@@ -4,6 +4,8 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const url = require('url');
+
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 function startServer() {
@@ -24,6 +26,12 @@ function startServer() {
     
     // Middleware to parse JSON bodies
     app.use(express.json());
+
+// bypass CSP on localhost
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "frame-ancestors 'self' http://localhost:8004;");
+  next();
+});
 
 app.get('/pdf/:file', (req, res) => {
     const file = req.params.file;
@@ -147,7 +155,7 @@ app.get('/pdf/:file', (req, res) => {
     });
 
 
-    app.use('/proxy', async (req, res, next) => {
+    app.use('/proxy2', async (req, res, next) => {
     const targetUrl = req.query.url;
 
     if (!targetUrl) {
@@ -193,17 +201,54 @@ app.get('/pdf/:file', (req, res) => {
         }
     }
     });
+app.use('/proxy', (req, res, next) => {
+  const targetUrl = req.query.url;
 
-    
+  if (!targetUrl) {
+    return res.status(400).send('Missing "url" query parameter');
+  }
 
-    
-    
+  const parsedUrl = url.parse(targetUrl);
 
+  const proxy = createProxyMiddleware({
+    target: `${parsedUrl.protocol}//${parsedUrl.host}`,
+    changeOrigin: true,
+    pathRewrite: (path, req) => {
+      return path.replace('/proxy', parsedUrl.path || '');
+    },
+    onProxyReq: (proxyReq, req, res) => {
+      proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36');
+      proxyReq.setHeader('Accept', '*/*');
+      proxyReq.setHeader('Referer', req.headers.referer || targetUrl);
+
+      if (req.headers.cookie) {
+        proxyReq.setHeader('Cookie', req.headers.cookie);
+      }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      const contentType = proxyRes.headers['content-type'];
+      if (contentType && contentType.includes('text/html')) {
+        // Log or handle the case where the MIME type is not as expected
+        console.warn('Warning: MIME type is text/html, which is not suitable for scripts');
+      }
+      proxyRes.headers['X-Proxy-By'] = 'YourProxy';  // Custom header
+    },
+    selfHandleResponse: false,
+    onError: (err, req, res) => {
+      console.error('Proxy error:', err);
+      res.status(500).send('Proxy error');
+    },
+  });
+
+  proxy(req, res, next);
+});
+    
+    
     
     
     
     // Proxy route to fetch external pages
-    app.get('/proxy_old', async (req, res) => {
+    app.get('/proxy1', async (req, res) => {
         const { url } = req.query;
         if (!url) {
             return res.status(400).send('URL parameter is required');

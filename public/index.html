@@ -50,6 +50,7 @@
 	  background-color: #000;
           cursor: grab;
           border-bottom: 1px solid #333;
+	  filter: invert(0) !important;
       }
       .emoji {
 	  width: 1em;
@@ -62,7 +63,7 @@
           right: 10px;
           width: 250px;
           background: #000; /*#1e1e1e;*/
-          border: 1px solid #000; /*1px solid #333;*/
+          border: 0px solid #000; /*1px solid #333;*/
           padding: 15px;
           display: none;
           border-radius: 8px;
@@ -182,7 +183,7 @@
           .section {
               /*display: none;*/
               flex-direction: column;
-              border: 1px solid #444;
+              border: 0px solid #444;
               overflow: hidden;
               background-color: #1e1e1e;
           }
@@ -331,7 +332,7 @@
               background: red;
               mix-blend-mode: multiply;
               pointer-events: none;
-	      filter: brightness(50%);
+	      filter: brightness(100%);
 	      background-color #000;
 	      
           }
@@ -671,7 +672,7 @@
 
 
 
-      window.DarkReader = require('darkreader');
+      //window.DarkReader = require('darkreader');
 
       // Global keydown event listener
       document.addEventListener('keydown', function (event) {
@@ -696,9 +697,10 @@
 
       let lastActiveWebView = null; // Track the last active webview
 
-      function createWebView(title, og_src, initialize=false, display="flex") {
+      function createWebView(title, og_src, og_code="", initialize=false, display="flex") {
 	  // Check if a tab with the same src already exists
 	  let src = og_src;
+	  const code = og_code;
 	  
 	  if ( !og_src.includes("localhost:") && false ) {
 	      src = "http://localhost:8004/proxy?url="+og_src
@@ -726,7 +728,7 @@
 	  
 	  // Create a new webview element
           
-	  const webview = document.createElement('iframe');
+	  const webview = document.createElement('webview');
 	  
 	  webview.src = src;
 	  
@@ -736,10 +738,17 @@
 	  
 	  webview.setAttribute("preload", "preload.js");
 	  
-	  webview.setAttribute('nodeintegration', '');
-	  webview.setAttribute('nodeintegrationinsubframes', '');
-	  webview.setAttribute('tabname', title)
-	  
+	  //webview.setAttribute('nodeintegration', '');
+	  //webview.setAttribute('nodeintegrationinsubframes', '');
+	  webview.setAttribute('tabname', title);
+	  webview.setAttribute('code', code);
+          //webview.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+
+          webview.setAttribute('sandbox', "allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation")
+
+	  //webview.setAttribute('allow', 'camera; clipboard-write; fullscreen; microphone; geolocation; SameSite=None; Secure');
+
+
 	  
 	  // Create a unique id for the webview
 	  const webviewId = `webview-${Date.now()}`;
@@ -753,7 +762,13 @@
 	  
 	  // Append the back button and webview to the container
 	  container.appendChild(webview);
-	  
+
+      // Inject Js from the code pane
+      webview.addEventListener('dom-ready', () => {
+            // Inject JavaScript
+          webview.executeJavaScript(`${code}`);
+        });
+      
 	  // When the webview gains focus, set it as the last active webview
 	  webview.addEventListener('focus', function () {
 	      lastActiveWebView = webview;
@@ -1398,8 +1413,9 @@
 		  // If the section has a src, it's a webview
 		  const title = sectionData.tabname || 'Untitled';
 		  const src = sectionData.src;
+		  const code = sectionData.code;
 
-		  createWebView(title, src, initialize=true, display=sectionData.style.display || 'none');
+		  createWebView(title, src, og_code=code, initialize=true, display=sectionData.style.display || 'none');
               } else {
 		  // Otherwise, toggle the section based on its display property
 		  const id = sectionData.id;
@@ -1434,6 +1450,7 @@
 		  // subtle, but the webview is NOT in a div, so we need the attributes from the section
 		  sectionData.src = section.src || null;
 		  sectionData.tabname = section.getAttribute('tabname') || null; // Ensure correct casing
+		  sectionData.code = section.getAttribute('code');
 
               }
 
@@ -2394,7 +2411,7 @@
 	  const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${sign}${offsetHours}:${offsetMinutes}`;
       }
 
-      const CURRENT_LOCATION = "Langkawi, Malaysia"
+      const CURRENT_LOCATION = "Chongqing, China"
       async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
 	  console.log("CREATED FROM", sourceId, "title: ", label);
 	  const width = 0;
@@ -2402,7 +2419,8 @@
 	  const type = "node";
 	  const session = driver.session();
 	  
-	  const date = getCurrentDateWithTimezone();
+	  //const date = getCurrentDateWithTimezone();
+	  const date = new Date().toISOString();
 
 	  // Check if a node with the same label already exists
 	  const existingNodeCheck = await session.run(
@@ -2445,7 +2463,7 @@
 	  return result.records[0].get('newNode').properties;
       }
 
-
+/*
       async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
 	  console.log("CREATED FROM", sourceId)
 	  const width = 0;
@@ -2475,7 +2493,7 @@
 	  session.close();
 	  return result.records[0].get('newNode').properties;
       }
-
+*/
       /*
 	async function createOrphanNode(x, y) {
 	const userInput = await openSearch('Create a new orphan node');
@@ -3974,7 +3992,7 @@
 	  } else if (d.url.length > 1) {
 	      //toggleSection('web-container', action="show")
 
-	      createWebView(d.label, d.url)
+	      createWebView(d.label, d.url, code=d.code)
 	      /*
 		console.log(`setting webviewElement to ${d.url}`)
 		if (d.url.includes(".pdf")) {
