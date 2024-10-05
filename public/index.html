@@ -1750,7 +1750,7 @@
 
       // Initialize Neo4j driver
       const driver = neo4j.driver(
-	  'bolt://localhost:7687', // Replace with your Neo4j instance address
+	  'bolt://localhost:7687', // Replace with your Neo4j instance address 7687
 	  neo4j.auth.basic('neo4j', 'password') // Replace with your Neo4j username and password
       );
 
@@ -2411,7 +2411,7 @@
 	  const formattedDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${sign}${offsetHours}:${offsetMinutes}`;
       }
 
-      const CURRENT_LOCATION = "Chongqing, China"
+      const CURRENT_LOCATION = "San Francisco, California"
       async function createNodeAndLink(sourceId, x, y, label, url, imageUrl) {
 	  console.log("CREATED FROM", sourceId, "title: ", label);
 	  const width = 0;
@@ -3506,16 +3506,14 @@
               .attr("height",  d => d.heights[d.instance]) // Adjust height as needed
               .attr("x", d => Number(d.x_positions[d.instance]) - (Number(d.widths[d.instance]) / 2 || 10))
               .attr("y", d => Number(d.y_positions[d.instance]) - (Number(d.heights[d.instance]) / 2 || 10))
-              .attr("xlink:href", d => { //.attr("xlink:href", d => d.imageUrl)
-		  /*if (d.imageUrl.startsWith('/uploads')) {
-		  // make electron happy
-		  // this is backwards compatibility with my old nodes
-		  return `${__dirname}${d.imageUrl}`;
-		  }*/
-
+              /*.attr("xlink:href", d => { 
 		  return d.imageUrl;
-	      })
-
+		  })*/
+               
+              .attr("data-original-url", d => { 
+		  return d.imageUrl;
+		  })
+              
 	      .attr("stroke", d => connectionsToColor(d.connections) || "red", "none", "none")
 	      .attr("stroke-dasharray", "3 3")
 
@@ -4427,6 +4425,79 @@
 	  return transform ? JSON.parse(transform) : null;
       }
 
+
+function showOrHideImagesOnZoom() {
+
+    // Check the zoom level using cur_trans.k and adjust rendering accordingly
+    if (cur_trans.k > 0.2) {  // Zoom threshold, adjust this based on preference
+
+        // Show the original image when zoomed in
+        nodeLayer.selectAll("image")
+            .each(function(d) {
+                const node = d3.select(this);
+                const originalUrl = node.attr("data-original-url");
+
+                // Only restore the original image if the original URL is stored
+                if (originalUrl) {
+                    console.log('Restoring original image for node:', d.id, 'Original URL:', originalUrl);
+                    node.attr("xlink:href", originalUrl);  // Restore the original image
+                    node.attr("display", "inline");  // Ensure the image is visible
+                } else {
+                    console.warn('No original URL stored for node:', d.id);
+                }
+            });
+
+        // Show text and link-labels when zoomed in
+        nodeLayer.selectAll("text, .link-label")
+            .attr("display", "inline");  // Ensure text and link labels are visible
+
+        // Remove any zoomed-out SVG placeholders when zoomed in
+        nodeLayer.selectAll("image.zoom-placeholder").remove();
+
+    } else {  // Zoom level is low, show the placeholder image and hide text and labels
+        nodeLayer.selectAll("image")
+            .each(function(d) {
+                const node = d3.select(this);
+                const currentUrl = node.attr("xlink:href");
+
+                // Store the original image URL in a temporary attribute if not already stored
+                if (!node.attr("data-original-url")) {
+                    console.log('Storing original image URL for node:', d.id, 'URL:', currentUrl);
+                    node.attr("data-original-url", currentUrl);  // Store original URL
+                }
+
+                // Replace the image with the placeholder
+                node.attr("xlink:href", "images/image_placeholder.svg")  // Use the SVG placeholder
+                    .attr("display", "inline");  // Ensure the image is visible
+            });
+
+        // Hide text and link-labels when zoomed out
+        nodeLayer.selectAll("text, .link-label")
+            .attr("display", "none");  // Hide the text and link labels
+
+        // Ensure that each node has a zoom-placeholder image (if not already added)
+        nodeLayer.selectAll(".node").each(function(d) {
+            const node = d3.select(this);
+
+            // Append a zoom-placeholder if it's not present
+            if (node.select("image.zoom-placeholder").empty()) {
+                node.append("image")
+                    .attr("class", "zoom-placeholder")
+                    .attr("xlink:href", "images/image_placeholder.svg")
+                    .attr("width", 20)  // Set a default width for the placeholder
+                    .attr("height", 20)  // Set a default height for the placeholder
+                    .attr("stroke", d => connectionsToColor(d.connections) || "red");
+            }
+        });
+    }
+}
+
+
+						  
+
+	  
+    
+
       let cur_trans = null;
 
       // Initialize zoom
@@ -4444,6 +4515,7 @@
 		const transform = event.transform;
 		cur_trans = transform;
 		drawNodesAndLinks(transform);
+		showOrHideImagesOnZoom();
 		drawGrid(transform);
 		saveTransformToLocalStorage(transform); // Save on end
 	    });
