@@ -18,7 +18,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        db-home = "/home/printer/.local/share/neo4j/example";
+        db-home = "/home/sim/.local/share/neo4j/example";
         auth-enabled = false;
         plugins = (with neo4j.plugins.${system}; [ gds ]);
         neo4jEnv = neo4j.packages.${system}.neo4jWrapper.override {
@@ -35,7 +35,7 @@
             fi
             if ! pgrep -x "neo4j" > /dev/null; then
               echo "Starting Neo4j..."
-              neo4j start
+              #export NEO4J_CONF=/home/sim/.local/share/neo4j/example/conf/neo4j.conf && neo4j start
             else
               echo "Neo4j is already running."
             fi

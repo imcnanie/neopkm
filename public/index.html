@@ -9,7 +9,6 @@
     <script src="js/split.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     
-    
     <style>
       html, body {
           height: 100%;
@@ -57,39 +56,56 @@
 	  height: 1em;
 	  vertical-align: middle;  /* Aligns emoji with text */
       }
+
+
+
       #inspector {
-          position: absolute;
-          top: 10px;
-          right: 10px;
-          width: 250px;
-          background: #000; /*#1e1e1e;*/
-          border: 0px solid #000; /*1px solid #333;*/
-          padding: 15px;
-          display: none;
-          border-radius: 8px;
-          box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-          overflow: auto;
-      }
-      #inspector h3 {
-          margin-top: 0;
-          font-size: 18px;
-          color: #f0f0f0;
-      }
-      #inspector label {
-          display: block;
-          margin-bottom: 10px;
-          font-size: 14px;
-          color: #ccc;
-      }
-      #inspector input {
-          width: 100%;
-          margin-bottom: 10px;
-          padding: 5px;
-          background: #000; /*#333;*/
-          border: 1px solid #555;
-          color: #e0e0e0;
-          border-radius: 4px;
-      }
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 250px;
+    background: #000; /*#1e1e1e;*/
+    border: 0px solid #000; /*1px solid #333;*/
+    padding: 15px;
+    display: none;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+/* Style adjustments for mobile devices */
+@media (max-width: 600px) {
+    #inspector {
+        width: 50%; /* Set to half the screen width */
+        right: 5px; /* Adjust the right position if needed */
+    }
+}
+
+#inspector h3 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #f0f0f0;
+}
+
+#inspector label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+#inspector input {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: #000; /*#333;*/
+    border: 1px solid #555;
+    color: #e0e0e0;
+    border-radius: 4px;
+}
+
+
+      
       #connections {
           margin-top: 10px;
       }
@@ -131,7 +147,7 @@
           color: #ccc;
           display: flex;
           align-items: center;
-          /*justify-content: space-between;*/
+          justify-content: space-between;
           padding: 10px;
           cursor: ns-resize;
           position: sticky;
@@ -145,7 +161,7 @@
           color: #e0e0e0;
           cursor: pointer;
           font-size: 1.2em;
-          margin-right: 10px;
+          margin-right: 0px;
           opacity: 1;
 	  filter: none;
           transition: opacity 0.3s, filter 0.3s;
@@ -185,7 +201,7 @@
               flex-direction: column;
               border: 0px solid #444;
               overflow: hidden;
-              background-color: #1e1e1e;
+              background-color: #000; /*#1e1e1e;*/
           }
           textarea {
               flex: 1;
@@ -364,11 +380,13 @@
 
 	  /* Base tab styling */
 	  .tab-button {
-	      background-color: #000;  /* Darker background for dark mode */
+	      /* Darker background for dark mode */
 	      color: #b3b3b3;  /* Softer light text for better readability */
-	      border-radius: 12px;  /* Slightly smaller rounded corners */
+      border-top-left-radius: 3px 3px;
+      border-top-right-radius: 3px 3px;  /* Slightly smaller rounded corners */
 	      font-size: 10px;  /* Smaller font size */
-	      width: 140px;  /* Slightly narrower for a sleeker look */
+      width: 140px;  /* Slightly narrower for a sleeker look */
+      height: 25px;
 	      /*padding: 6px 12px;*/  /* Adjusted padding for better text fit */
 	      border: 0px solid #555;  /* Subtle contrast for the border */
 	      margin-right: 6px;  /* Reduced space between tabs */
@@ -377,7 +395,8 @@
 	      overflow: hidden;  /* Prevent text overflow */
 	      text-overflow: ellipsis;  /* Add ellipsis if text is too long */
 	      white-space: nowrap;  /* Keep the text on a single line */
-	      transition: background-color 0.2s ease, color 0.2s ease;
+      transition: background-color 0.2s ease, color 0.2s ease;
+      
 	  }
 
 	  /* Hover effect */
@@ -407,15 +426,31 @@
 	  /* Optional: to handle overflow, you can add this */
 	  #tabs {
 	      overflow-x: auto;
-	      white-space: nowrap;
-	  }
+      white-space: nowrap;
+      background-color: #000000;
+      }
 
+        .toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 16px;
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
 
-
-
-
-
-
+  /* Show the toast */
+  .toast.show {
+    visibility: visible;
+    opacity: 1;
+  }
 
     </style>
 
@@ -425,6 +460,7 @@
 
   </head>
   <body>
+    <div id="toast" class="toast"></div>
     
     <svg id="nodeWorldSVG">
       <defs>
@@ -482,18 +518,26 @@
 	</button>
 	<button id="toggle-filter" class="hidden" onclick="setupRedMode();">🌻</button>
 
-	<button id="toggle-filter" class="hidden" onclick="document.getElementById('video-container').classList.toggle('invert-filter');document.getElementById('web-container').classList.toggle('invert-filter');  ">invert</button>
+	<button id="toggle-filter" class="hidden" onclick="document.getElementById('video-container').classList.toggle('invert-filter');document.getElementById('web-container').classList.toggle('invert-filter');  ">☯</button>
 
-	<input type="file" id="imageInput">
-	<button id="screenshot-button" onclick="uploadImage()">📷</button>
-	<div id="uploadStatus"></div>
+	<label id="screenshot-button" style="cursor: pointer;">
+	  📷
+	  <input type="file" id="imageInput" style="display: none;" onchange="uploadImage()">
+	</label>
+	<button id="toggle-inspector" class="hidden" onclick="document.getElementById('inspector').style.display = (inspectorVisible = !inspectorVisible) ? 'block' : 'none';">💡</button>
+	<button id="toggle-spotlight" class="hidden" onclick="window.spotlightZoom();">🔎</button>
+
+	<!--<input type="file" id="imageInput" style="display: none;" onchange="uploadImage()">
+	<button id="screenshot-button" onclick="document.getElementById('imageInput').click()">📷</button>
+	<div id="uploadStatus"></div>-->
+
         <!--<button onclick="toggleSplitContainer()" id="toggleButton" style="background-color: #333; border: none; color: #ccc; width: 30px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 15px; transform: scaleX(1.1) scaleY(0.7) translateY(0.3em)">
             ^
 	    </button>-->
-	<div id="tabs" style="width:100%, height:100%">
-	  <!-- tabs go here -->
-	</div>
-	<div></div>
+	
+      </div>
+      <div id="tabs" style="width:100%, height:100%">
+	<!-- tabs go here -->
       </div>
       <div id="horizontal-splitter" class="flex-container">
 	<div class="overlay"></div>    <!-- this way we can drag over iframes without problems -->
@@ -1021,6 +1065,7 @@
 
     <!-- image upload -->
     <script>
+      /*
       function uploadImage() {
 	  const imageInput = document.getElementById('imageInput');
 	  const file = imageInput.files[0];
@@ -1047,7 +1092,55 @@
 		  document.getElementById('uploadStatus').innerHTML = 'Error occurred during upload!';
 		  console.error('Error:', error);
 	      });
+	      }*/
+
+        function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.innerHTML = message;
+    toast.className = "toast show"; // Add the show class to make it visible
+
+    // Hide the toast after 3 seconds
+    setTimeout(() => {
+      toast.className = toast.className.replace("show", "");
+    }, 3000);
+	}
+
+ function uploadImage() {
+    const imageInput = document.getElementById('imageInput');
+    const file = imageInput.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    fetch('/upload', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        showToast(`Upload successful! File path: ${data.filename}`);
+        
+        // Assuming currentNode is defined elsewhere in your code
+        createNodeAndLink(
+          currentNode.id, 
+          currentNode.x_positions[0], 
+          currentNode.y_positions[0] + 30,
+          data.filename, 
+          "", 
+          "uploads/" + data.filename
+        );
+      } else {
+        showToast('Upload failed!');
       }
+    })
+    .catch(error => {
+      showToast('Error occurred during upload!');
+      console.error('Error:', error);
+    });
+      }
+      
     </script>
     
 
@@ -1398,6 +1491,7 @@
       const titleBar = document.getElementById('title-bar');
       const splitContainer = document.getElementById('split-container');
       const inspectorGadget = document.getElementById('inspector');
+      let inspectorVisible = false;
       const nodeWorldSVG = document.getElementById('nodeWorldSVG');
       let isDraggingTitleBar = false;
       const overlay = document.querySelector('.overlay');
@@ -1474,7 +1568,7 @@
       }
 
 
-
+      /*
       titleBar.addEventListener('mousedown', function(e) {
 	  isDraggingTitleBar = true;
 	  overlay.classList.add('active');
@@ -1508,9 +1602,121 @@
 	  updateConfigNodeProperty("titlebar_position", newTop)
       });
 
+*/
+
+      // TITLE BAR DRAGGING
+      /*
+      function getEventY(e) {
+  // For touch events, use the first touch point
+  return e.touches ? e.touches[0].clientY : e.clientY;
+}
+
+titleBar.addEventListener('mousedown', startDrag);
+titleBar.addEventListener('touchstart', startDrag);
+
+function startDrag(e) {
+  e.preventDefault(); // Prevents any unintended behavior during touch events
+  isDraggingTitleBar = true;
+  overlay.classList.add('active');
+  document.body.style.cursor = 'ns-resize';
+}
+
+// Maximum height of inspectorGadget and top position of splitContainer
+inspectorGadget.style.maxHeight = `${window.innerHeight - titleBar.offsetHeight - 10}px`;
+splitContainer.style.top = `${window.innerHeight - titleBar.offsetHeight}px`;
+
+window.addEventListener('mousemove', drag);
+window.addEventListener('touchmove', drag);
+
+function drag(e) {
+  if (!isDraggingTitleBar) return;
+
+  let newTop = getEventY(e) - titleBar.offsetHeight / 2.0;
+  
+  // Limit the dragging area to the window boundaries
+  if (newTop < 0) newTop = 0;
+  if (newTop > window.innerHeight - titleBar.offsetHeight) newTop = window.innerHeight - titleBar.offsetHeight;
+  
+  setTitleBarPosition(titleBar, newTop);
+}
+
+window.addEventListener('mouseup', endDrag);
+window.addEventListener('touchend', endDrag);
+
+function endDrag() {
+  isDraggingTitleBar = false;
+  overlay.classList.remove('active');
+  document.body.style.cursor = 'default';
+
+  updateConfigNodeProperty("titlebar_position", newTop);
+  }*/
+
+      //let isDraggingTitleBar = false;
+
+      let dragStartTime;
+//let isDraggingTitleBar = false;
+//let newTop;
+
+function getEventY(e) {
+  return e.touches ? e.touches[0].clientY : e.clientY;
+}
+
+// Record the start time of the drag
+function startDrag(e) {
+  dragStartTime = Date.now();
+  isDraggingTitleBar = true;
+  overlay.classList.add('active');
+  document.body.style.cursor = 'ns-resize';
+}
+
+titleBar.addEventListener('mousedown', startDrag);
+titleBar.addEventListener('touchstart', startDrag);
+
+function drag(e) {
+  // Check if dragging is happening
+  if (!isDraggingTitleBar) return;
+
+  // Calculate the new top position for the title bar
+  newTop = getEventY(e) - titleBar.offsetHeight / 2.0;
+
+  // Limit dragging area within window boundaries
+  if (newTop < 0) newTop = 0;
+  if (newTop > window.innerHeight - titleBar.offsetHeight) newTop = window.innerHeight - titleBar.offsetHeight;
+
+  setTitleBarPosition(titleBar, newTop);
+}
+
+function endDrag() {
+  // Calculate drag duration
+  const dragDuration = Date.now() - dragStartTime;
+
+  // Only apply drag updates if the drag lasted more than 200 ms
+  if (dragDuration > 200) {
+    overlay.classList.remove('active');
+    document.body.style.cursor = 'default';
+    updateConfigNodeProperty("titlebar_position", newTop);
+  }
+  
+  isDraggingTitleBar = false;
+}
+
+// Maximum height of inspectorGadget and top position of splitContainer
+inspectorGadget.style.maxHeight = `${window.innerHeight - titleBar.offsetHeight - 10}px`;
+splitContainer.style.top = `${window.innerHeight - titleBar.offsetHeight}px`;
+
+window.addEventListener('mousemove', drag);
+window.addEventListener('touchmove', drag);
+window.addEventListener('mouseup', endDrag);
+window.addEventListener('touchend', endDrag);
+
+      
+
+	  
 
 
+      // END TITLE BAR DRAGGING
 
+      
       function toggleSplitContainer() {
 	  var splitContainer = document.getElementById("split-container");
 	  var toggleButton = document.getElementById("toggleButton");
@@ -1750,13 +1956,13 @@
 
       // Initialize Neo4j driver
       const driver = neo4j.driver(
-	  'bolt://localhost:7687', // Replace with your Neo4j instance address 7687
-	  neo4j.auth.basic('neo4j', 'password') // Replace with your Neo4j username and password
+	  'bolt://nixos-1:7687', // Replace with your Neo4j instance address 7687
+	  neo4j.auth.basic('neo4j', 'neo4jneo4j') // Replace with your Neo4j username and password
       );
 
       async function fetchFirstInstanceNodesAndLinks(x0, x1, y0, y1) {
 	  const session = driver.session();
-	  const result = await session.run(
+	  /*const result = await session.run(
               `MATCH (n)
          WHERE any(x IN n.x_positions WHERE x >= $x0 AND x <= $x1)
            AND any(y IN n.y_positions WHERE y >= $y0 AND y <= $y1)
@@ -1767,7 +1973,24 @@
                 size((n)--()) AS n_connections,
                 size((m)--()) AS m_connections`,
               { x0, x1, y0, y1 }
+	      );*/
+	  const result = await session.run(
+	      `MATCH (n)
+   WHERE any(x IN n.x_positions WHERE x >= $x0 AND x <= $x1)
+     AND any(y IN n.y_positions WHERE y >= $y0 AND y <= $y1)
+   OPTIONAL MATCH (n)-[r]->(m)
+   WHERE any(x IN m.x_positions WHERE x >= $x0 AND x <= $x1)
+     AND any(y IN m.y_positions WHERE y >= $y0 AND y <= $y1)
+   // Count connections for n
+   OPTIONAL MATCH (n)--(n_connections)
+   // Count connections for m
+   OPTIONAL MATCH (m)--(m_connections)
+   RETURN n, r, m,
+          COUNT(n_connections) AS n_connections,
+          COUNT(m_connections) AS m_connections`,
+	      { x0, x1, y0, y1 }
 	  );
+
 	  session.close();
 	  let nodes = []; // Reset nodes array
 	  let links = []; // Reset links array
@@ -1833,7 +2056,7 @@
 
       async function fetchNodesAndLinks(x0, x1, y0, y1) {
 	  const session = driver.session();
-	  const result = await session.run(
+	  /*const result = await session.run(
               `MATCH (n)
          WHERE any(x IN n.x_positions WHERE x >= $x0 AND x <= $x1)
            AND any(y IN n.y_positions WHERE y >= $y0 AND y <= $y1)
@@ -1844,7 +2067,24 @@
                 size((n)--()) AS n_connections,
                 size((m)--()) AS m_connections`,
               { x0, x1, y0, y1 }
+	      );*/
+
+	  const result = await session.run(
+	      `MATCH (n)
+   WHERE any(x IN n.x_positions WHERE x >= $x0 AND x <= $x1)
+     AND any(y IN n.y_positions WHERE y >= $y0 AND y <= $y1)
+   OPTIONAL MATCH (n)-[r]->(m)
+   WHERE any(x IN m.x_positions WHERE x >= $x0 AND x <= $x1)
+     AND any(y IN m.y_positions WHERE y >= $y0 AND y <= $y1)
+   // Count the connections for n
+   OPTIONAL MATCH (n)-[n_rel]-()
+   WITH n, r, m, COUNT(n_rel) AS n_connections
+   // Count the connections for m
+   OPTIONAL MATCH (m)-[m_rel]-()
+   RETURN n, r, m, n_connections, COUNT(m_rel) AS m_connections`,
+	      { x0, x1, y0, y1 }
 	  );
+
 	  session.close();
 	  nodes = []; // Reset nodes array
 	  links = []; // Reset links array
@@ -1928,7 +2168,7 @@
 	  const session = driver.session();
 
 	  const getNodeConnections = async (nodeId) => {
-              const resultTo = await session.run(
+             /* const resultTo = await session.run(
 		  `MATCH (n {id: $nodeId})-[r]->(m)
              WHERE NOT type(r) = 'INHERITED_FROM'
              RETURN m, size((m)--()) AS m_connections`,
@@ -1939,7 +2179,25 @@
              WHERE n.id = $nodeId AND NOT type(r) = 'INHERITED_FROM'
              RETURN m, size((m)--()) AS m_connections`,
 		  { nodeId }
-              );
+		  );*/
+
+	      const resultTo = await session.run(
+		  `MATCH (n {id: $nodeId})-[r]->(m)
+   WHERE NOT type(r) = 'INHERITED_FROM'
+   OPTIONAL MATCH (m)--(m_connections)
+   RETURN m, COUNT(m_connections) AS m_connections`,
+		  { nodeId }
+	      );
+
+	      const resultFrom = await session.run(
+		  `MATCH (n)<-[r]-(m)
+   WHERE n.id = $nodeId AND NOT type(r) = 'INHERITED_FROM'
+   OPTIONAL MATCH (m)--(m_connections)
+   RETURN m, COUNT(m_connections) AS m_connections`,
+		  { nodeId }
+	      );
+
+
 
               const connectionsTo = [];
               const connectionsFrom = [];
@@ -2008,12 +2266,20 @@
 	  };
 
 	  const getInheritors = async (nodeId) => {
-              const inheritorsResult = await session.run(
+              /*const inheritorsResult = await session.run(
 		  `MATCH (n)<-[:INHERITED_FROM]-(m)
              WHERE n.id = $nodeId
              RETURN m, size((m)--()) AS m_connections`,
 		  { nodeId }
-              );
+		  );*/
+	      const inheritorsResult = await session.run(
+		  `MATCH (n)<-[:INHERITED_FROM]-(m)
+   WHERE n.id = $nodeId
+   OPTIONAL MATCH (m)--(m_connections)
+   RETURN m, COUNT(m_connections) AS m_connections`,
+		  { nodeId }
+	      );
+
 
               const inheritors = [];
               inheritorsResult.records.forEach(record => {
@@ -2030,12 +2296,19 @@
 
 	  
 	  const getSiblings = async (nodeId, inheritedNodeId) => {
-              const siblingsResult = await session.run(
+              /*const siblingsResult = await session.run(
 		  `MATCH (s)-[:INHERITED_FROM]->(m)
              WHERE m.id = $inheritedNodeId AND s.id <> $nodeId
              RETURN s, size((s)--()) AS s_connections`,
 		  { inheritedNodeId, nodeId }
-              );
+		  );*/
+	      const siblingsResult = await session.run(
+		  `MATCH (s)-[:INHERITED_FROM]->(m)
+   WHERE m.id = $inheritedNodeId AND s.id <> $nodeId
+   OPTIONAL MATCH (s)--(s_connections)
+   RETURN s, COUNT(s_connections) AS s_connections`,
+		  { inheritedNodeId, nodeId }
+	      );
 
               const siblings = [];
               siblingsResult.records.forEach(record => {
@@ -4134,8 +4407,9 @@
 	      document.getElementById("nodeFlake").value = d.flake || "";
 	  }
 
-	  
-	  inspector.style.display = "block";
+	  if (inspectorVisible) {
+	      inspector.style.display = "block";
+	  }
 	  //codeEditor.style.display = "block";
 
 	  // Many things rely on this
