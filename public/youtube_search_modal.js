@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // YouTube API call
     function searchYouTube(query, apiKey) {
-        const apiURL = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${query}&key=${apiKey}`;
+        const apiURL = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&type=video&q=${query}&key=${apiKey}`;
 
         fetch(apiURL)
             .then(response => response.json())
@@ -100,12 +100,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             //console.log(`Title: ${item.snippet.title}`);
                             //console.log(`URL: https://www.youtube.com/watch?v=${item.id.videoId}`);
                             //console.log(`Description: ${item.snippet.description}`);
-			    console.log(item);
-			    createNodeAndLink(currentNode.id, currentNode.x_positions[0], currentNode.y_positions[0] + 30,
-					      item.snippet.title, `https://www.youtube.com/watch?v=${item.id.videoId}`, item.snippet.thumbnails.default.url);
+			    console.log("ADDING A VIDEO", item);
+			    createNodeAndLink(currentNode.id,
+					      currentNode.x_positions[0],
+					      currentNode.y_positions[0] + 30,
+					      item.snippet.title,
+					      `https://www.youtube.com/watch?v=${item.id.videoId}`,
+					      item.snippet.thumbnails.default.url);
 			    //modal.style.display = 'none';
                         };
-                        videoResults.appendChild(videoItem);
+			//console.log("Appending a video to list ", item)
+                            videoResults.appendChild(videoItem);
                     });
                 }
             })

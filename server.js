@@ -4,7 +4,10 @@ const axios = require('axios');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const cors = require('cors');
+app.use(cors());
 
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 8004;
@@ -61,6 +64,33 @@ app.post('/upload', upload.single('image'), (req, res) => {
     });
 */
 
+
+// Route to handle question requests
+app.post('/api/ask', async (req, res) => {
+    const { question } = req.body;
+
+    try {
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: question }],
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+                }
+            }
+        );
+
+        const answer = response.data.choices[0].message.content;
+        res.json({ answer });
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ error: 'Something went wrong' });
+    }
+});
 
 
 app.get('/proxy', async (req, res) => {

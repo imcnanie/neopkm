@@ -495,6 +495,11 @@
 	<button onclick="toggleSection('code-editor')" class="hidden">
 	  <img src="images/code-icon.svg" alt="code editor" class="emoji">
 	</button>
+	
+	<button onclick="askAQAboutSelection('code-editor')" class="hidden">
+	  🇶
+	</button>
+
 	<button onclick="toggleSection('flake-editor')" class="hidden">
 	  <img src="images/nix-logo.svg" alt="flake" class="emoji">
 	</button>
@@ -518,7 +523,7 @@
 	</button>
 	<button id="toggle-filter" class="hidden" onclick="setupRedMode();">🌻</button>
 
-	<button id="toggle-filter" class="hidden" onclick="document.getElementById('video-container').classList.toggle('invert-filter');document.getElementById('web-container').classList.toggle('invert-filter');  ">☯</button>
+	<button id="toggle-filter" class="hidden" onclick=" toggleInvertIframes()">☯</button>
 
 	<label id="screenshot-button" style="cursor: pointer;">
 	  📷
@@ -527,6 +532,8 @@
 	<button id="toggle-inspector" class="hidden" onclick="document.getElementById('inspector').style.display = (inspectorVisible = !inspectorVisible) ? 'block' : 'none';">💡</button>
 	<button id="toggle-spotlight" class="hidden" onclick="window.spotlightZoom();">🔎</button>
 
+	
+	
 	<!--<input type="file" id="imageInput" style="display: none;" onchange="uploadImage()">
 	<button id="screenshot-button" onclick="document.getElementById('imageInput').click()">📷</button>
 	<div id="uploadStatus"></div>-->
@@ -609,6 +616,90 @@
     <script src="youtube_search_modal.js"></script>
     <script src="MarginaliaSearchModal_script.js"></script>
 
+    <!-- ask a q -->
+    <script>
+
+      async function askAQAboutSelection() {
+	  const selected_text = getSelectedTextInTextarea();
+	  askChatGPT(selected_text)
+	      .then(answer => {
+		  //console.log("ChatGPT Answer:", answehr);
+		  appendToSelectedTextInTextarea("\n\n---\n\n"+answer)
+	      })
+	      .then(answer => {
+		  updateNodeProperty(currentNode.id, "code", document.getElementById("nodeCode").value);
+	      })
+	      .catch(error => {
+		  console.error("Error fetching answer:", error.message);
+	      });
+	  
+      }
+
+      async function askChatGPT(question) {
+	  try {
+	      const response = await fetch('/api/ask', {
+		  method: 'POST',
+		  headers: {
+		      'Content-Type': 'application/json'
+		  },
+		  body: JSON.stringify({ question })
+	      });
+	      
+	      const data = await response.json();
+	      return data.answer;
+	  } catch (error) {
+	      console.error('Error:', error.message);
+	      throw error;
+	  }
+      }
+
+      
+
+      function getSelectedTextInTextarea() {
+	  const textarea = document.getElementById("nodeCode");
+	  
+	  if (textarea) {
+	      const selectedText = textarea.value.substring(
+		  textarea.selectionStart,
+		  textarea.selectionEnd
+	      );
+	      
+	      return selectedText || null; // Return selected text or null if nothing is selected
+	  } else {
+	      console.error("Textarea element not found.");
+	      return null;
+	  }
+      }
+      
+      function appendToSelectedTextInTextarea(newText) {
+	  const textarea = document.getElementById("nodeCode");
+	  
+	  if (textarea) {
+	      const start = textarea.selectionStart;
+	      const end = textarea.selectionEnd;
+	      const selectedText = textarea.value.substring(start, end);
+	      
+	      if (selectedText) {
+		  const appendedText = selectedText + newText;
+		  const beforeText = textarea.value.substring(0, start);
+		  const afterText = textarea.value.substring(end);
+		  
+		  // Update the textarea value with the appended text
+		  textarea.value = beforeText + appendedText + afterText;
+		  
+		  // Set the cursor position after the newly appended text
+		  textarea.selectionStart = textarea.selectionEnd = start + appendedText.length;
+	      } else {
+		  console.log("No text selected in the textarea to append to.");
+	      }
+	  } else {
+	      console.log("Textarea element not found.");
+	  }
+      }
+
+
+      </script>
+    
     <!-- setup red mode-->
     <script>
       function setupRedMode() {
@@ -714,7 +805,20 @@
     <script>
 
 
-
+      
+      let iframes = document.querySelectorAll('iframe');
+      // Function to toggle inversion on all iframes
+      function toggleInvertIframes() {
+	  console.log("INVERTING")
+	  iframes.forEach((iframe) => {
+              // Toggle the filter style between inverted and none
+              if (iframe.style.filter === 'invert(1)') {
+		  iframe.style.filter = 'none';
+              } else {
+		  iframe.style.filter = 'invert(1)';
+              }
+	  });
+      }
 
       //window.DarkReader = require('darkreader');
 
@@ -772,7 +876,7 @@
 	  
 	  // Create a new webview element
           
-	  const webview = document.createElement('webview');
+	  const webview = document.createElement('iframe'); // Electron could be a webview elem
 	  
 	  webview.src = src;
 	  
@@ -788,7 +892,7 @@
 	  webview.setAttribute('code', code);
           //webview.setAttribute('sandbox', 'allow-scripts allow-same-origin');
 
-          webview.setAttribute('sandbox', "allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation")
+          //webview.setAttribute('sandbox', "allow-same-origin allow-scripts allow-popups allow-forms allow-modals allow-top-navigation")  // useful for electron
 
 	  //webview.setAttribute('allow', 'camera; clipboard-write; fullscreen; microphone; geolocation; SameSite=None; Secure');
 
@@ -806,17 +910,34 @@
 	  
 	  // Append the back button and webview to the container
 	  container.appendChild(webview);
-
-      // Inject Js from the code pane
-      webview.addEventListener('dom-ready', () => {
+	  iframes = document.querySelectorAll('iframe');
+	// Inject Js from the code pane
+	// Sadly can't inject js cross-origin
+	// also can't detect focus :'(
+	/*webview.addEventListener('dom-ready', () => {
+	console.log("INJECTING JS")
             // Inject JavaScript
-          webview.executeJavaScript(`${code}`);
-        });
-      
-	  // When the webview gains focus, set it as the last active webview
-	  webview.addEventListener('focus', function () {
-	      lastActiveWebView = webview;
-	  });
+        webview.executeJavaScript(`${code}`);
+
+	
+	// Detect when webview is focused
+	webview.addEventListener('focus', () => {
+	console.log("Webview is focused");
+	lastActiveWebView = webview;
+	});
+	
+	// Detect when webview loses focus
+	webview.addEventListener('blur', () => {
+	console.log("Webview lost focus");
+	});
+	
+	// For some browsers, you may need to set the `tabindex` attribute to make the webview focusable
+	webview.setAttribute('tabindex', '-1');
+        });*/
+	
+	
+	//console.log("SETTING UP WEBVIEW", webview)
+	
 	  
 	  
 	  
@@ -1027,7 +1148,7 @@
 		  if (data.status === 'success') {
 		      document.getElementById('uploadStatus').innerHTML = `Upload successful! File path: ${data.filename}`;
 		      createNodeAndLink(currentNode.id, currentNode.x_positions[0], currentNode.y_positions[0] + 30,
-					data.filename, "", "uploads/" + data.filename);
+					data.filename, "", "/uploads/" + data.filename);
 		  } else {
 		      document.getElementById('uploadStatus').innerHTML = 'Upload failed!';
 		  }
@@ -1540,7 +1661,7 @@
               // If the section has a webview, include its src and tabName
 
 
-              if (section.id.includes("webview")) {
+              if (section.id.includes("iframe") || section.id.includes("webview")) { 
 		  // subtle, but the webview is NOT in a div, so we need the attributes from the section
 		  sectionData.src = section.src || null;
 		  sectionData.tabname = section.getAttribute('tabname') || null; // Ensure correct casing
@@ -1824,7 +1945,7 @@ window.addEventListener('touchend', endDrag);
       function setVideoUrl(d) {
 	  const videoId = getYouTubeVideoId(d.url);
 	  if (videoId) {
-	      console.log("VIDEO NODE", parseFloat(d.videoTime))
+	      console.log("VIDEO NODE", parseFloat(d.videoTime), "ID ", videoId)
 	      setupYouTubePlayer(videoId, time = parseFloat(d.videoTime));  // Replace this with the desired video ID
               const embedUrl = `https://www.youtube.com/embed/${videoId}`;
               //document.getElementById('webviewElement').src = `${embedUrl}`; //embedUrl
@@ -4377,7 +4498,10 @@ window.addEventListener('touchend', endDrag);
 	  const inspector = document.getElementById("inspector");
 	  const codeEditor = document.getElementById("code-editor");
 	  let inheritedProperties;
-	  
+
+	  // Many things rely on this
+	  currentNode = d;
+
 
 	  // TODO modify this to inherit EVERYTHING at once
 	  if (d.type === "inherited") {
@@ -4412,8 +4536,6 @@ window.addEventListener('touchend', endDrag);
 	  }
 	  //codeEditor.style.display = "block";
 
-	  // Many things rely on this
-	  currentNode = d;
 
 	  setupSections(d.label);
 
@@ -4896,11 +5018,12 @@ function showOrHideImagesOnZoom() {
 	          break;
               }
 
-              console.log("UPDATING NODE", nodeId, "PROPERTY", propertyName, "VAL", event.target.value);
+              console.log("UPDATING NODE2", nodeId, "PROPERTY", propertyName, "VAL", event.target.value);
 
               if (currentNode.type !== "inherited" && event.target.localName !== "td") {
 
 		  await updateNodeProperty(currentNode.id, propertyName, event.target.value);
+									      
               }
 
 	      // Update tests
